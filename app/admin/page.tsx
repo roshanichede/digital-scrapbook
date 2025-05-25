@@ -2,7 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsItem } from "@/components/ui/tabs";
+//import { Tabs, TabsContent, TabsList, TabsItem } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { User } from "@/types";
@@ -104,14 +105,14 @@ export default function AdminPage() {
 
         <Tabs defaultValue="create">
           <TabsList className="mb-8">
-            <TabsItem value="create">
+            <TabsTrigger value="create">
               <PlusCircle className="h-4 w-4 mr-2" />
               Add Memory
-            </TabsItem>
-            <TabsItem value="manage">
+            </TabsTrigger>
+            <TabsTrigger value="manage">
               <ListChecks className="h-4 w-4 mr-2" />
               Manage Memories
-            </TabsItem>
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="create">

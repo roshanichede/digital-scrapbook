@@ -5,7 +5,7 @@ import PageLoader from "@/components/ui/page-loader";
 import { Separator } from "@/components/ui/separator";
 import { Book, Calendar } from "lucide-react";
 
-export const dynamic = 'force-dynamic';
+//export const dynamic = 'force-dynamic';
 
 export default function StorybookPage() {
   return (

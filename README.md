@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Anniversary Scrapbook Web App
 
 A beautiful digital scrapbook for your special moments together. This web application allows you to create and share memories with your loved one in an interactive and visually appealing way.
@@ -37,3 +38,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 ## License
 
 This project is licensed under the MIT License.
+=======
+# our-journey
+>>>>>>> cd62d7668cf29ea0bef05eeb20d67b02b806f763
