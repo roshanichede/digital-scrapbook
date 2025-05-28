@@ -7,6 +7,8 @@ export interface Memory {
   audio_url?: string;
   created_at: string;
   updated_at: string;
+  recommended_layout?: string;
+  decorations?: string;
 }
 
 export type MediaItem = {

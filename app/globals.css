@@ -138,3 +138,14 @@
     transform: rotate(3deg);
   }
 }
+.rotate-y-140 {
+  transform: rotateY(-140deg);
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
