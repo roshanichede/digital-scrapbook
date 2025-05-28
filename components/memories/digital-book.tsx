@@ -947,7 +947,7 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
   }
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-pink-50 via-rose-50 to-pink-100 p-4">
+    <div className="flex items-center justify-center min-h-screen  p-4">
       {/* CSS keyframes for page flip animation */}
       <style jsx>{`
         @keyframes pageFlip {
@@ -989,7 +989,14 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
         </div>
 
         {/* Book Container */}
-        <div className="relative w-full h-full ml-8" style={{ transformStyle: 'preserve-3d' }}>
+        <div className="relative w-full h-full ml-8" style={{ 
+          boxShadow: `
+            0 0 20px rgba(0,0,0,0.3),
+            0 0 40px rgba(0,0,0,0.2),
+            inset -10px 0 20px rgba(0,0,0,0.2),
+            inset 0 0 30px rgba(255,255,255,0.1)
+  `         ,  
+          transformStyle: 'preserve-3d' }}>
           
           {/* Book Cover */}
           <div 
@@ -999,10 +1006,10 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
               transformStyle: 'preserve-3d',
               backfaceVisibility: 'hidden',
               transform: isOpen ? 'rotateY(-160deg)' : 'rotateY(0deg)',
-              backgroundImage: 'url("/1.jpg")',
+              backgroundImage: 'url("/2.png")',
               backgroundSize: 'cover',
               backgroundColor: '#FFB6C1',
-              backgroundPosition: '50% 35%',
+              backgroundPosition: '25% 45%',
               backgroundRepeat: 'no-repeat',
               opacity: 1,
               boxShadow: '0 10px 40px rgba(255, 182, 193, 0.4), inset 0 1px 5px rgba(255,255,255,0.6)',
@@ -1059,6 +1066,21 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
                 zIndex: 10
               }}
             >
+              {/* Left Page - Simple white page with paper texture */}
+{isOpen && (
+  <div
+    className="absolute w-full h-full rounded-l-2xl shadow-lg"
+    style={{
+      transformStyle: 'preserve-3d',
+      backfaceVisibility: 'hidden',
+      background: 'linear-gradient(135deg, #fefefe 0%, #fdf8f5 100%)',
+      borderRight: '1px solid #f0e6d6',
+      transform: 'rotateY(0deg)',
+      zIndex: 5,
+      right: '100%', // Positions it to the left of the spiral
+      marginRight: '16px' // Gap between left page and spiral
+    }}
+  >
               {/* Paper texture */}
               <div 
                 className="absolute inset-0 rounded-r-2xl opacity-20"
@@ -1099,6 +1121,7 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
             </div>
           )}
         </div>
+        
     {/* Random Memory Button - Shows when book is closed */}
 {!isOpen && memories.length > 0 && (
   <div className="absolute top-4 right-4 z-30">
