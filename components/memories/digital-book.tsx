@@ -1,13 +1,15 @@
-// Enhanced digital-book.tsx with AI decorations rendering
+// Enhanced digital-book.tsx with AI decorations rendering and sticky notes
 
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, StickyNote as StickyNoteIcon } from 'lucide-react';
 import { Memory } from '@/types';
 import { supabase } from '@/lib/supabase';
 import Image from 'next/image';
 import { format } from 'date-fns';
+//import { useStickyNotes, StickyNote, StickyNotesModal } from '@/components/StickyNotes';
+import { useStickyNotes, StickyNote, StickyNotesModal } from '../StickyNotes';
 
 interface DigitalBookProps {
   coverImage?: string;
@@ -22,6 +24,13 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   
   const totalPages = memories.length;
+
+  // Sticky notes hook
+  const { 
+    setShowNoteModal, 
+    getNotesForMemory,
+    stickyNotes 
+  } = useStickyNotes();
 
   // Fetch memories from Supabase
   useEffect(() => {
@@ -105,16 +114,23 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
   }, [isOpen, currentPage, totalPages, zoomedImage]);
 
   const openRandomPage = () => {
-  if (memories.length === 0) return;
-  
-  const randomIndex = Math.floor(Math.random() * memories.length);
-  const randomPageNumber = randomIndex + 1; // Pages start from 1
-  
-  setIsOpen(true);
-  setCurrentPage(randomPageNumber);
-};
+    if (memories.length === 0) return;
+    
+    const randomIndex = Math.floor(Math.random() * memories.length);
+    const randomPageNumber = randomIndex + 1; // Pages start from 1
+    
+    setIsOpen(true);
+    setCurrentPage(randomPageNumber);
+  };
 
   const currentMemory = currentPage > 0 ? memories[currentPage - 1] : null;
+
+  // Add sticky note handler
+  const handleAddStickyNote = () => {
+    if (currentMemory) {
+      setShowNoteModal(true);
+    }
+  };
 
   // Theme-based color selection
   const getThemeColor = (mood: string): string => {
@@ -682,24 +698,29 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
   const renderScrapbookPage = (memory: Memory, pageIndex: number) => {
     const layout = getPageLayout(memory, pageIndex);
     const photos = memory.media?.filter(item => item.type === 'image') || [];
+    const pageNotes = getNotesForMemory(memory.id || '');
     
-    // Wrapper with smart decorations
-    // return (
-    //   <div className="relative w-full h-full">
-    //     {/* AI Decorations Layer with layout awareness */}
-    //     {renderAIDecorations(memory, layout)}
-        
-    //     {/* Content Layer - ABOVE decorations */}
-    //     <div className="relative z-10 w-full h-full">
-    //       {renderLayoutContent(layout, memory, photos, pageIndex)}
-    //     </div>
-    //   </div>
-    // ); 
     return (
     <div className="relative w-full h-full">
       {/* Content Layer - BOTTOM layer */}
       <div className="relative z-0 w-full h-full">
         {renderLayoutContent(layout, memory, photos, pageIndex)}
+      </div>
+      
+      {/* Sticky Notes Layer - MIDDLE layer */}
+      <div className="absolute inset-0 z-40">
+        <div 
+          className="relative w-full h-full"
+          style={{
+            // Ensure the container has proper bounds for sticky note positioning
+            minHeight: '100%',
+            minWidth: '100%'
+          }}
+        >
+          {pageNotes.map((note) => (
+            <StickyNote key={note.id} note={note} />
+          ))}
+        </div>
       </div>
       
       {/* AI Decorations Layer - TOPMOST layer over everything */}
@@ -1017,8 +1038,6 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
             }}
           >
             <div className="w-full h-full flex flex-col items-center justify-center text-white relative z-10  rounded-r-2xl">
-              {/* <h1 className="text-5xl font-serif mb-6 text-white drop-shadow-lg">Our Story</h1>
-              <p className="text-xl italic text-white/90 drop-shadow mb-8">Six beautiful months of us</p> */}
               <p className="text-sm opacity-80 bg-white/20 px-4 py-2 rounded-full backdrop-blur-sm">Click to open</p>
             </div>
 
@@ -1066,21 +1085,6 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
                 zIndex: 10
               }}
             >
-              {/* Left Page - Simple white page with paper texture */}
-{isOpen && (
-  <div
-    className="absolute w-full h-full rounded-l-2xl shadow-lg"
-    style={{
-      transformStyle: 'preserve-3d',
-      backfaceVisibility: 'hidden',
-      background: 'linear-gradient(135deg, #fefefe 0%, #fdf8f5 100%)',
-      borderRight: '1px solid #f0e6d6',
-      transform: 'rotateY(0deg)',
-      zIndex: 5,
-      right: '100%', // Positions it to the left of the spiral
-      marginRight: '16px' // Gap between left page and spiral
-    }}
-  >
               {/* Paper texture */}
               <div 
                 className="absolute inset-0 rounded-r-2xl opacity-20"
@@ -1138,7 +1142,7 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
 {isOpen && currentPage > 0 && (
   <>
     {/* Top right navigation arrows */}
-    <div className="absolute top-4 right-4 flex gap-2 z-[10]">
+    <div className="absolute top-4 right-4 flex gap-2 z-[100]">
       <button
         onClick={prevPage}
         disabled={currentPage <= 1}
@@ -1153,6 +1157,15 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
         className="bg-white/90 hover:bg-white shadow-lg p-2 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-all"
       >
         <ChevronRight size={20} />
+      </button>
+      
+      {/* Add Sticky Note Button */}
+      <button
+        onClick={handleAddStickyNote}
+        className="bg-yellow-400/90 hover:bg-yellow-500 shadow-lg p-2 rounded-full transition-all"
+        title="Add a sticky note"
+      >
+        <StickyNoteIcon size={20} />
       </button>
       
       <button
@@ -1191,6 +1204,9 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
           </div>
         </div>
       )}
+
+      {/* Sticky Notes Modal */}
+      {currentMemory && <StickyNotesModal memoryId={currentMemory.id || ''} />}
     </div>
   );
 };

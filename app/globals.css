@@ -149,3 +149,14 @@
 .backface-hidden {
   backface-visibility: hidden;
 }
+
+/* Add to your globals.css */
+
+.font-handwriting {
+  font-family: var(--font-kalam), 'Kalam', cursive;
+}
+
+/* Additional handwriting styles if needed */
+.font-kalam {
+  font-family: var(--font-kalam), 'Kalam', cursive;
+}
