@@ -1,6 +1,6 @@
 // hooks/useLayoutRecommendation.ts
 import { useState, useCallback } from 'react';
-import { LayoutType, LayoutAnalysis } from '@/lib/layoutAI';
+import { LayoutType, LayoutAnalysis } from '@/lib/LayoutAI';
 
 interface UseLayoutRecommendationReturn {
   recommendation: LayoutAnalysis | null;
