@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { CalendarIcon, Plus, Trash2, ImagePlus, FileAudio, Sparkles, Check, X, Info, Loader2, AlertTriangle, Palette } from "lucide-react";
 import { useLayoutRecommendation } from "@/hooks/useLayoutRecommendation";
-import { LayoutType, LayoutAI, StoryEnhancement, CompleteRecommendation } from "@/lib/layoutAI";
+import { LayoutType, LayoutAI, StoryEnhancement, CompleteRecommendation } from "../../lib/layoutAI";
 import { DecorationAI, PageDecorations } from "@/lib/decorationAI";
 
 
