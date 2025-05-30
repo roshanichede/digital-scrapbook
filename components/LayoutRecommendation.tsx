@@ -1,6 +1,6 @@
 // components/LayoutRecommendation.tsx
 import React from 'react';
-import { LayoutAnalysis, LayoutAI } from '@/lib/layoutAI';
+import { LayoutAnalysis, LayoutAI } from '@/lib/LayoutAI';
 import { Sparkles, Info, Check, X, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
