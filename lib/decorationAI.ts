@@ -91,190 +91,271 @@ export class DecorationAI {
       return this.getFallbackDecorations(memoryType, tone);
     }
   }
+private static getRandomDecorationMix(): string {
+  const mixes = [
+    "Emoji + Geometric shapes + Line art for modern feel",
+    "Doodles + Patterns + Stickers for playful energy", 
+    "Nature emojis + Organic shapes + Vine borders for natural feel",
+    "Abstract shapes + Subtle patterns + Corner accents for elegant look",
+    "Mixed emojis + Scattered dots + Frame elements for dynamic layout",
+    "Hand-drawn style doodles + Watercolor shapes + Flowing lines"
+  ];
+  
+  return mixes[Math.floor(Math.random() * mixes.length)];
+}
 
-  private static buildEnhancedDecorationPrompt(
-    caption: string,
-    memoryType: string,
-    tone: string,
-    layout: string,
-    additionalContext?: any
-  ): string {
-    const context = additionalContext || {};
-    
-    return `You are a creative digital scrapbook decorator specializing in romantic couple memories. Analyze this memory and suggest 5-7 decorative elements that will add charm and personality to the page without overwhelming the photos and text.
+private static getPositioningStrategy(focusArea: string, layout: string): string {
+  const strategies: Record<string, string> = {
+    corners: `Place elements in corners and edges, creating triangular balance. Avoid center 30-70% area where content sits.`,
+    scattered: `Distribute elements organically across negative space. Create visual rhythm with varied sizes and spacing.`,
+    border_style: `Create flowing border elements along edges. Use connecting line art and repeating patterns.`,
+    artistic_asymmetric: `Use asymmetric placement for modern artistic feel. Cluster some elements, isolate others for visual interest.`
+  };
+  
+  return (strategies[focusArea] || strategies.corners) + ` Consider ${layout} layout's typical content areas when placing decorations.`;
+}
+private static buildEnhancedDecorationPrompt(
+  caption: string,
+  memoryType: string,
+  tone: string,
+  layout: string,
+  additionalContext?: any
+): string {
+  const context = additionalContext || {};
+  
+  // Add randomization to decoration approach
+  const creativityLevel = Math.random();
+  const focusArea = ['corners', 'scattered', 'border_style', 'artistic_asymmetric'][Math.floor(Math.random() * 4)];
+  const decorationDensity = ['minimal', 'moderate', 'rich'][Math.floor(Math.random() * 3)];
+  
+  // Randomize color palette selection
+  const colorPalettes = [
+    ['#FFB6C1', '#FFC0CB', '#FFCCCB', '#E6E6FA'], // soft pinks/lavender
+    ['#98FB98', '#F0E68C', '#DEB887', '#F5F5DC'], // nature greens/yellows
+    ['#87CEEB', '#B0E0E6', '#ADD8E6', '#F0F8FF'], // sky blues
+    ['#DDA0DD', '#D8BFD8', '#E6E6FA', '#F8F8FF'], // purples
+    ['#FFE4B5', '#FFDAB9', '#F5DEB3', '#FFF8DC'], // warm peach/cream
+    ['#F0FFF0', '#E0FFE0', '#CCFFCC', '#B3FFB3']  // mint greens
+  ];
+  const selectedPalette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
+  
+  return `You are a whimsical scrapbook decorator creating UNIQUE decorations for each memory. Your goal is to avoid repetitive patterns and create fresh, personalized decorative elements.
 
-MEMORY ANALYSIS:
+CREATIVITY INSTRUCTION: This decoration session should feel ${creativityLevel > 0.7 ? 'bold and artistic' : creativityLevel > 0.4 ? 'playfully varied' : 'subtly elegant'}
+
+MEMORY TO DECORATE:
 - Caption: "${caption}"
 - Title: "${context.title || 'Untitled'}"
-- Memory Type: ${memoryType}
-- Tone: ${tone}
-- Layout Style: ${layout}
-- Location: ${context.location || 'Not specified'}
-- Date: ${context.date || 'Not specified'}
+- Type: ${memoryType} (${tone} tone)
+- Layout: ${layout}
 
-AVAILABLE DECORATION TYPES:
-1. EMOJI: Romantic and cute emojis
-   - Romantic: 💕, 💖, 💗, 💘, 💝, 💞, 💟, ❤️, 🧡, 💛, 💚, 💙, 💜, 🤍, 🖤, 🤎
-   - Nature: 🌸, 🌺, 🌻, 🌹, 🌷, 🌼, 🏵️, 💐, 🌿, 🍃, 🌱, 🌳, 🦋, 🐝
-   - Celestial: ⭐, 🌟, ✨, 💫, 🌙, ☀️, 🌈, ☁️, 🌤️
-   - Fun: 🎈, 🎉, 🎊, 🎀, 🎁, 🧸, 🍰, 🥳
-   - Travel: ✈️, 🗺️, 🧳, 📸, 🎒, 🏖️, 🏔️, 🏰
+DECORATION APPROACH FOR THIS MEMORY:
+- Focus: ${focusArea} placement style
+- Density: ${decorationDensity} decoration coverage
+- Palette: Use colors from [${selectedPalette.slice(0, 3).join(', ')}] as primary palette
 
-2. DOODLE: Simple hand-drawn style illustrations
-   - heart, star, flower, butterfly, arrow, swirl, cloud, sun, moon
-   - vine, branch, leaf, petal, spiral, wave, zigzag, dots_line
+AVOID REPETITIVE PATTERNS:
+- Don't always use hearts for romantic memories
+- Don't default to same emoji combinations
+- Vary positioning patterns (not always corners)
+- Mix decoration types creatively
+- Use different color combinations each time
 
-3. SHAPE: Basic geometric shapes with soft colors
-   - circle, triangle, diamond, rectangle, oval, hexagon
-   - Use soft pastel colors that complement the memory mood
+CONTENT-SPECIFIC DECORATION IDEAS:
+Analyze the caption for specific mentions and create decorations around them:
+- If mentions specific objects, foods, places → use related emojis/doodles
+- If mentions weather/time → use atmospheric elements
+- If mentions feelings → translate to abstract shapes/patterns
+- If mentions activities → use action-related decorations
 
-4. LINE_ART: Delicate decorative lines and borders
-   - vine_border, dot_trail, swirl_corner, heart_chain, star_scatter
-   - wave_line, zigzag_border, petal_trail, bubble_trail
+DECORATION TYPES TO MIX:
+${this.getRandomDecorationMix()}
 
-5. PATTERN: Repeated small decorative elements
-   - confetti, sparkles, petals_falling, hearts_scatter, dots_pattern
-   - stars_cluster, bubbles, musical_notes
+POSITIONING STRATEGIES:
+${this.getPositioningStrategy(focusArea, layout)}
 
-6. STICKER: Fun sticker-like elements
-   - "LOVE", "CUTE", "BEST DAY", "FOREVER", heart_stamp, star_stamp
-   - polaroid_frame, washi_tape, paper_clip, pin, stamp
+CURRENT REQUIREMENTS:
+- Create 4-7 elements (based on ${decorationDensity} density)
+- Use ${focusArea} positioning approach
+- Colors primarily from: ${selectedPalette.slice(0, 3).join(', ')}
+- Make it feel ${creativityLevel > 0.6 ? 'creative and unique' : 'thoughtfully personal'}
+- Avoid overused combinations (hearts + roses, stars + confetti)
 
-7. FRAME_CORNER: Decorative corner elements
-   - floral_corner, geometric_corner, heart_corner, vine_corner
+SPECIFIC DECORATION SELECTION:
+Look for these cues in the caption and respond accordingly:
+- Food mentions → food emojis (🍰🍕🍜)
+- Nature words → nature elements (🌿🦋🌸)
+- Activity words → activity emojis (📷🎨⚽)
+- Emotion words → translate to colors and abstract shapes
+- Time/season words → seasonal decorations
 
-POSITIONING STRATEGY for ${layout} layout:
-- Avoid center areas (25-75% x and y) where photos/text usually appear
-- Place decorations in corners, edges, and negative space
-- For ${layout}: Consider the typical content placement for this layout style
-- Romantic memories: Use corners and gentle scattered placement
-- Celebratory memories: More dynamic placement with variety
-- Travel memories: Border-style decorations work well
-- Daily memories: Simple, subtle placement
-
-CONTENT-BASED DECORATION SELECTION:
-Based on the caption analysis, choose decorations that reflect:
-- Key themes mentioned (love, fun, nature, travel, etc.)
-- Emotional tone (romantic = hearts/flowers, playful = stars/confetti)
-- Specific activities or objects mentioned
-- Season or location if mentioned
-- Overall mood and energy level
-
-RULES FOR OPTIMAL DECORATION:
-1. Choose 5-7 elements that tell a visual story
-2. Mix different types (emoji + doodle + shape) for variety
-3. Use colors that complement each other and the memory tone
-4. Vary sizes: 2-3 small, 2-3 medium, 1-2 large elements
-5. Keep opacity between 0.15-0.4 to avoid competing with photos
-6. Rotate elements slightly (15-45 degrees) for organic feel
-7. Layer elements thoughtfully (layer 1-5)
-8. Ensure elements enhance rather than distract from the content
-
-COLOR PALETTE BY MOOD:
-- Romantic: Soft pinks (#FFB6C1, #FFC0CB), warm peach (#FFCCCB), lavender (#E6E6FA)
-- Playful: Bright coral (#FF7F7F), sunny yellow (#FFD700), sky blue (#87CEEB)
-- Nostalgic: Sepia tones (#DEB887), soft brown (#D2B48C), muted purple (#DDA0DD)
-- Peaceful: Sage green (#9CAF88), soft blue (#B0E0E6), cream (#F5F5DC)
-- Energetic: Vibrant orange (#FF6347), electric blue (#00BFFF), lime (#32CD32)
+FRESH ALTERNATIVES TO COMMON CHOICES:
+Instead of: hearts → try: sparkles, butterflies, flowers, geometric shapes
+Instead of: stars → try: moons, suns, diamonds, dots patterns
+Instead of: standard corners → try: trailing elements, scattered clusters, border waves
 
 Respond ONLY with valid JSON:
 {
   "elements": [
     {
       "type": "emoji|doodle|shape|line_art|pattern|sticker|frame_corner",
-      "content": "💕 or heart or circle or vine_border",
-      "position": {"x": 15, "y": 20},
+      "content": "specific emoji or element name",
+      "position": {"x": number, "y": number},
       "size": "small|medium|large", 
-      "rotation": -30 to 30,
+      "rotation": number,
       "opacity": 0.15-0.4,
-      "color": "#FFB6C1",
+      "color": "hex color from palette",
       "layer": 1-5
     }
   ],
-  "theme": "romantic_date|fun_celebration|peaceful_moment|travel_adventure|daily_joy",
+  "theme": "descriptive_theme_based_on_content",
   "mood": "romantic|playful|nostalgic|peaceful|energetic|heartwarming"
 }`;
-  }
+}
+
+private static getVariedFallbackDecorations(memoryType: string, tone: string) {
+  const baseColors = ['#FFB6C1', '#87CEEB', '#98FB98', '#DDA0DD', '#F0E68C', '#FFCCCB'];
+  const randomColor1 = baseColors[Math.floor(Math.random() * baseColors.length)];
+  const randomColor2 = baseColors[Math.floor(Math.random() * baseColors.length)];
+  
+  // Create multiple variations for each memory type
+  const variations: Record<string, Array<{ elements: DecorationElement[]; theme: string; }>> = {
+    date: [
+      {
+        elements: [
+          { type: 'emoji', content: '💕', position: { x: 85, y: 15 }, size: 'medium', rotation: 15, opacity: 0.3, layer: 2 },
+          { type: 'doodle', content: 'butterfly', position: { x: 10, y: 80 }, size: 'small', rotation: -20, opacity: 0.25, color: randomColor1, layer: 1 },
+          { type: 'emoji', content: '🌙', position: { x: 90, y: 70 }, size: 'small', rotation: 0, opacity: 0.2, layer: 3 },
+          { type: 'line_art', content: 'dot_trail', position: { x: 5, y: 20 }, size: 'medium', rotation: 45, opacity: 0.15, layer: 1 }
+        ],
+        theme: 'dreamy_romance'
+      },
+      {
+        elements: [
+          { type: 'emoji', content: '🦋', position: { x: 20, y: 10 }, size: 'small', rotation: 30, opacity: 0.3, layer: 2 },
+          { type: 'shape', content: 'circle', position: { x: 85, y: 75 }, size: 'medium', rotation: 0, opacity: 0.2, color: randomColor2, layer: 1 },
+          { type: 'emoji', content: '🌸', position: { x: 15, y: 85 }, size: 'small', rotation: -15, opacity: 0.25, layer: 2 },
+          { type: 'pattern', content: 'sparkles', position: { x: 90, y: 25 }, size: 'small', rotation: 0, opacity: 0.2, layer: 1 }
+        ],
+        theme: 'gentle_moments'
+      },
+      {
+        elements: [
+          { type: 'emoji', content: '✨', position: { x: 75, y: 20 }, size: 'medium', rotation: 0, opacity: 0.35, layer: 3 },
+          { type: 'doodle', content: 'swirl', position: { x: 15, y: 75 }, size: 'small', rotation: 30, opacity: 0.2, color: randomColor1, layer: 1 },
+          { type: 'emoji', content: '🍃', position: { x: 90, y: 45 }, size: 'small', rotation: -25, opacity: 0.25, layer: 2 },
+          { type: 'frame_corner', content: 'vine_corner', position: { x: 5, y: 5 }, size: 'small', rotation: 0, opacity: 0.2, color: randomColor2, layer: 1 }
+        ],
+        theme: 'natural_beauty'
+      }
+    ],
+    
+    celebration: [
+      {
+        elements: [
+          { type: 'emoji', content: '🎈', position: { x: 15, y: 10 }, size: 'medium', rotation: 10, opacity: 0.35, layer: 3 },
+          { type: 'pattern', content: 'confetti', position: { x: 80, y: 20 }, size: 'large', rotation: 0, opacity: 0.25, layer: 1 },
+          { type: 'emoji', content: '🌟', position: { x: 90, y: 75 }, size: 'small', rotation: -15, opacity: 0.3, layer: 2 },
+          { type: 'doodle', content: 'star', position: { x: 12, y: 65 }, size: 'small', rotation: 30, opacity: 0.2, color: '#FFD700', layer: 1 }
+        ],
+        theme: 'joyful_celebration'
+      },
+      {
+        elements: [
+          { type: 'emoji', content: '🎊', position: { x: 20, y: 15 }, size: 'medium', rotation: -20, opacity: 0.3, layer: 2 },
+          { type: 'emoji', content: '🥳', position: { x: 85, y: 25 }, size: 'small', rotation: 15, opacity: 0.35, layer: 3 },
+          { type: 'shape', content: 'triangle', position: { x: 10, y: 80 }, size: 'small', rotation: 45, opacity: 0.2, color: randomColor1, layer: 1 },
+          { type: 'pattern', content: 'hearts_scatter', position: { x: 75, y: 70 }, size: 'medium', rotation: 0, opacity: 0.25, layer: 1 }
+        ],
+        theme: 'festive_fun'
+      }
+    ],
+    
+    travel: [
+      {
+        elements: [
+          { type: 'emoji', content: '🗺️', position: { x: 80, y: 10 }, size: 'medium', rotation: 25, opacity: 0.3, layer: 3 },
+          { type: 'doodle', content: 'cloud', position: { x: 10, y: 15 }, size: 'small', rotation: 0, opacity: 0.2, color: '#87CEEB', layer: 1 },
+          { type: 'emoji', content: '🧳', position: { x: 15, y: 75 }, size: 'small', rotation: -10, opacity: 0.25, layer: 2 },
+          { type: 'line_art', content: 'wave_line', position: { x: 85, y: 80 }, size: 'medium', rotation: -15, opacity: 0.25, layer: 2 }
+        ],
+        theme: 'wanderlust_journey'
+      },
+      {
+        elements: [
+          { type: 'emoji', content: '📸', position: { x: 20, y: 20 }, size: 'small', rotation: 15, opacity: 0.3, layer: 2 },
+          { type: 'emoji', content: '🏔️', position: { x: 75, y: 15 }, size: 'medium', rotation: 0, opacity: 0.25, layer: 2 },
+          { type: 'pattern', content: 'dots_pattern', position: { x: 90, y: 70 }, size: 'small', rotation: 0, opacity: 0.15, layer: 1 },
+          { type: 'doodle', content: 'arrow', position: { x: 10, y: 85 }, size: 'small', rotation: 30, opacity: 0.2, color: randomColor2, layer: 1 }
+        ],
+        theme: 'adventure_memories'
+      }
+    ],
+    
+    milestone: [
+      {
+        elements: [
+          { type: 'emoji', content: '🌟', position: { x: 85, y: 15 }, size: 'large', rotation: 0, opacity: 0.35, layer: 3 },
+          { type: 'frame_corner', content: 'geometric_corner', position: { x: 5, y: 5 }, size: 'medium', rotation: 0, opacity: 0.3, color: randomColor1, layer: 2 },
+          { type: 'emoji', content: '💫', position: { x: 15, y: 80 }, size: 'medium', rotation: 20, opacity: 0.25, layer: 2 },
+          { type: 'pattern', content: 'sparkles', position: { x: 75, y: 85 }, size: 'medium', rotation: 0, opacity: 0.2, layer: 1 }
+        ],
+        theme: 'precious_milestone'
+      },
+      {
+        elements: [
+          { type: 'emoji', content: '🎖️', position: { x: 20, y: 10 }, size: 'medium', rotation: -15, opacity: 0.3, layer: 3 },
+          { type: 'doodle', content: 'spiral', position: { x: 80, y: 25 }, size: 'small', rotation: 0, opacity: 0.2, color: '#9370DB', layer: 1 },
+          { type: 'shape', content: 'diamond', position: { x: 90, y: 75 }, size: 'small', rotation: 45, opacity: 0.25, color: randomColor2, layer: 1 },
+          { type: 'line_art', content: 'heart_chain', position: { x: 10, y: 70 }, size: 'medium', rotation: 0, opacity: 0.2, layer: 2 }
+        ],
+        theme: 'achievement_celebration'
+      }
+    ],
+    
+    daily: [
+      {
+        elements: [
+          { type: 'emoji', content: '🌻', position: { x: 20, y: 15 }, size: 'small', rotation: 30, opacity: 0.25, layer: 2 },
+          { type: 'doodle', content: 'flower', position: { x: 85, y: 75 }, size: 'medium', rotation: -10, opacity: 0.2, color: '#98FB98', layer: 1 },
+          { type: 'emoji', content: '☀️', position: { x: 90, y: 25 }, size: 'small', rotation: 0, opacity: 0.3, layer: 2 },
+          { type: 'shape', content: 'oval', position: { x: 5, y: 80 }, size: 'small', rotation: 20, opacity: 0.15, color: randomColor1, layer: 1 }
+        ],
+        theme: 'everyday_sunshine'
+      },
+      {
+        elements: [
+          { type: 'emoji', content: '🌈', position: { x: 75, y: 10 }, size: 'medium', rotation: 0, opacity: 0.3, layer: 2 },
+          { type: 'pattern', content: 'petals_falling', position: { x: 15, y: 70 }, size: 'small', rotation: 0, opacity: 0.2, layer: 1 },
+          { type: 'doodle', content: 'butterfly', position: { x: 90, y: 45 }, size: 'small', rotation: -25, opacity: 0.25, color: randomColor2, layer: 2 },
+          { type: 'line_art', content: 'vine_border', position: { x: 5, y: 85 }, size: 'small', rotation: 0, opacity: 0.15, layer: 1 }
+        ],
+        theme: 'simple_joys'
+      }
+    ]
+  };
+  
+  const typeVariations = variations[memoryType] || variations.daily;
+  return typeVariations;
+}
 
   /**
    * Enhanced fallback decorations with more variety
    */
-  private static getFallbackDecorations(
-    memoryType: string,
-    tone: string
-  ): PageDecorations {
-    const decorations: DecorationElement[] = [];
-    
-    // Base decorations by memory type with enhanced variety
-    switch (memoryType) {
-      case 'date':
-      case 'romantic':
-        decorations.push(
-          { type: 'emoji', content: '💕', position: { x: 85, y: 15 }, size: 'medium', rotation: 15, opacity: 0.3, layer: 2 },
-          { type: 'doodle', content: 'heart', position: { x: 10, y: 80 }, size: 'small', rotation: -20, opacity: 0.25, color: '#FFB6C1', layer: 1 },
-          { type: 'emoji', content: '🌸', position: { x: 90, y: 70 }, size: 'small', rotation: 0, opacity: 0.2, layer: 3 },
-          { type: 'shape', content: 'circle', position: { x: 5, y: 20 }, size: 'small', rotation: 0, opacity: 0.15, color: '#FFC0CB', layer: 1 },
-          { type: 'line_art', content: 'heart_chain', position: { x: 75, y: 85 }, size: 'medium', rotation: -10, opacity: 0.2, layer: 2 }
-        );
-        break;
-        
-      case 'celebration':
-        decorations.push(
-          { type: 'emoji', content: '🎈', position: { x: 15, y: 10 }, size: 'medium', rotation: 10, opacity: 0.35, layer: 3 },
-          { type: 'emoji', content: '⭐', position: { x: 85, y: 20 }, size: 'small', rotation: 45, opacity: 0.3, layer: 2 },
-          { type: 'pattern', content: 'confetti', position: { x: 5, y: 85 }, size: 'large', rotation: 0, opacity: 0.25, layer: 1 },
-          { type: 'emoji', content: '🎉', position: { x: 90, y: 75 }, size: 'small', rotation: -15, opacity: 0.3, layer: 2 },
-          { type: 'doodle', content: 'star', position: { x: 12, y: 65 }, size: 'small', rotation: 30, opacity: 0.2, color: '#FFD700', layer: 1 }
-        );
-        break;
-        
-      case 'travel':
-        decorations.push(
-          { type: 'emoji', content: '✈️', position: { x: 80, y: 10 }, size: 'medium', rotation: 25, opacity: 0.3, layer: 3 },
-          { type: 'doodle', content: 'cloud', position: { x: 10, y: 15 }, size: 'small', rotation: 0, opacity: 0.2, color: '#87CEEB', layer: 1 },
-          { type: 'line_art', content: 'wave_line', position: { x: 85, y: 80 }, size: 'medium', rotation: -15, opacity: 0.25, layer: 2 },
-          { type: 'emoji', content: '🗺️', position: { x: 8, y: 75 }, size: 'small', rotation: -10, opacity: 0.25, layer: 2 },
-          { type: 'pattern', content: 'dots_pattern', position: { x: 92, y: 45 }, size: 'small', rotation: 0, opacity: 0.15, layer: 1 }
-        );
-        break;
-        
-      case 'milestone':
-        decorations.push(
-          { type: 'emoji', content: '🌟', position: { x: 85, y: 15 }, size: 'large', rotation: 0, opacity: 0.35, layer: 3 },
-          { type: 'frame_corner', content: 'floral_corner', position: { x: 5, y: 5 }, size: 'medium', rotation: 0, opacity: 0.3, color: '#DDA0DD', layer: 2 },
-          { type: 'emoji', content: '💫', position: { x: 15, y: 80 }, size: 'medium', rotation: 20, opacity: 0.25, layer: 2 },
-          { type: 'doodle', content: 'spiral', position: { x: 90, y: 70 }, size: 'small', rotation: 0, opacity: 0.2, color: '#9370DB', layer: 1 },
-          { type: 'pattern', content: 'sparkles', position: { x: 75, y: 85 }, size: 'medium', rotation: 0, opacity: 0.2, layer: 1 }
-        );
-        break;
-        
-      default: // daily
-        decorations.push(
-          { type: 'emoji', content: '🦋', position: { x: 20, y: 15 }, size: 'small', rotation: 30, opacity: 0.25, layer: 2 },
-          { type: 'doodle', content: 'flower', position: { x: 85, y: 75 }, size: 'medium', rotation: -10, opacity: 0.2, color: '#98FB98', layer: 1 },
-          { type: 'shape', content: 'circle', position: { x: 5, y: 90 }, size: 'small', rotation: 0, opacity: 0.15, color: '#F0E68C', layer: 1 },
-          { type: 'emoji', content: '🌿', position: { x: 92, y: 25 }, size: 'small', rotation: -20, opacity: 0.2, layer: 2 },
-          { type: 'line_art', content: 'vine_border', position: { x: 10, y: 70 }, size: 'small', rotation: 45, opacity: 0.15, layer: 1 }
-        );
-    }
-
-    // Add tone-specific adjustments
-    if (tone === 'romantic') {
-      decorations.forEach(dec => {
-        if (dec.color && dec.color.includes('FF')) dec.opacity *= 1.2; // Make romantic colors more visible
-      });
-    } else if (tone === 'playful') {
-      decorations.forEach(dec => {
-        dec.rotation += Math.random() * 20 - 10; // Add more rotation variety
-      });
-    }
-
-    return {
-      elements: decorations,
-      theme: memoryType,
-      mood: this.mapToneToMood(tone)
-    };
-  }
+ private static getFallbackDecorations(
+  memoryType: string,
+  tone: string
+): PageDecorations {
+  // Add randomization to fallback decorations too
+  const variations = this.getVariedFallbackDecorations(memoryType, tone);
+  const selectedVariation = variations[Math.floor(Math.random() * variations.length)];
+  
+  return {
+    elements: selectedVariation.elements,
+    theme: selectedVariation.theme,
+    mood: this.mapToneToMood(tone)
+  };
+}
 
   private static mapToneToMood(tone: string): PageDecorations['mood'] {
     const moodMap: Record<string, PageDecorations['mood']> = {

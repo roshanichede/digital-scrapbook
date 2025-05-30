@@ -154,42 +154,98 @@ export class LayoutAI {
   }
 
   private static buildStoryPrompt(
-    originalCaption: string,
-    additionalContext?: any
-  ): string {
-    const context = additionalContext || {};
-    
-    return `You are helping someone improve their personal caption for their couple's scrapbook. Take their original words and make them sound more personal and warm, like they're talking directly to their partner.
+  originalCaption: string,
+  additionalContext?: any
+): string {
+  const context = additionalContext || {};
+  
+  // Add variety to story enhancement approaches
+  const approaches = [
+    "Keep the exact same story flow but make it sound like you're talking directly to your partner",
+    "Transform this into a warm, personal message to your partner about this moment",
+    "Rewrite this as if you're telling your partner why this moment was special to you",
+    "Turn this into something you'd write in a love note about this memory",
+    "Make this sound like you're sharing a favorite memory with your partner",
+    "Rewrite this like you're looking through photos together and reminiscing about this moment"
+  ];
+  
+  const randomApproach = approaches[Math.floor(Math.random() * approaches.length)];
+  
+  // Vary the writing style instructions
+  const styleInstructions = [
+    "Write naturally like you're texting your partner about this memory",
+    "Use a warm, conversational tone like you're cuddling and sharing memories",
+    "Write like you're looking through photos together and reminiscing",
+    "Use simple, heartfelt language like you're talking face-to-face",
+    "Write like you're sharing a sweet memory during a quiet moment together",
+    "Make it sound like a gentle conversation between partners"
+  ];
+  
+  const randomStyle = styleInstructions[Math.floor(Math.random() * styleInstructions.length)];
 
-IMPORTANT RULES:
+  // Randomize opening style preference (not completely forbidden, just varied)
+  const openingVariety = Math.random();
+  let openingGuidance = "";
+  
+  if (openingVariety < 0.3) {
+    // 30% chance: Allow nostalgic openings
+    openingGuidance = `
+OPENING STYLE: Feel free to start nostalgically if it fits naturally (like "Remember when..." or "I'll never forget...")`;
+  } else if (openingVariety < 0.7) {
+    // 40% chance: Encourage action/emotion starts  
+    openingGuidance = `
+OPENING STYLE: Try starting with the action or emotion instead of "Remember when" - like "You did..." or "I loved how you..." or "That time when you..."`;
+  } else {
+    // 30% chance: Encourage present-tense or direct starts
+    openingGuidance = `
+OPENING STYLE: Start directly with the moment or feeling - avoid "Remember when" and try starting with what happened or how it felt`;
+  }
+
+  return `You are helping someone improve their personal caption for their couple's scrapbook. ${randomApproach}
+
+CORE RULES:
 - Change "he/she" to "you" 
 - Write like they're talking TO their partner (use "you")
 - Don't add details that weren't in the original caption
 - Don't make up new facts or events  
-- Keep the same basic story and facts
-- Just make the wording flow better and sound more heartfelt
-- Use simple, natural language like they're talking to their boyfriend/girlfriend
-- Keep it feeling genuine and conversational
+- Keep the same basic story and timeline
+- ${randomStyle}
+- Keep it feeling genuine and personal
+- Avoid overly dramatic or cliché romance language
 - Make it sound like something they'd actually say to their partner
+
+${openingGuidance}
+
+VARIETY IN OPENINGS - Mix these up:
+- Nostalgic: "Remember when you..." "I'll never forget how you..."
+- Action-focused: "You surprised me..." "That night you..." 
+- Emotion-focused: "I loved how you..." "My heart melted when you..."
+- Direct: "The way you looked at me..." "Your smile when..."
+- Conversational: "You know that time when..." "I was just thinking about how you..."
 
 ORIGINAL CONTEXT:
 - Caption: "${originalCaption}"
 - Title: "${context.title || 'Untitled Memory'}"
 - Date: ${context.date || 'Not specified'}
-- Location: ${context.location || 'Not specified'}
 
-Take their exact story and rewrite it like they're talking directly to their partner, using "you" and making it more personal and warm.
+Take their exact story and rewrite it to sound more personal and warm, using "you" and varying how you start the story.
 
-Example:
-Original: "He texted me late that night"
-Enhanced: "You texted me late that night and it was so sweet"
+Example transformations:
+Original: "He surprised me with dinner"
+Enhanced: "You surprised me with dinner and I couldn't stop smiling"
+
+Original: "We went to the beach that day"  
+Enhanced: "Remember when we went to the beach? You were so excited about the waves"
+
+Original: "That was such a fun night"
+Enhanced: "I loved how much fun we had that night"
 
 Respond ONLY with valid JSON in this exact format:
 {
   "enhancedCaption": "Your beautiful enhanced story here...",
   "tone": "romantic|playful|nostalgic|heartwarming"
 }`;
-  }
+}
 
   /**
    * Analyze memory content and recommend the best layout using Gemini
@@ -254,79 +310,78 @@ Respond ONLY with valid JSON in this exact format:
     }
   }
 
-  private static buildGeminiPrompt(
-    imageCount: number,
-    caption: string,
-    additionalContext?: any
-  ): string {
-    const context = additionalContext || {};
-    const analysis = this.analyzeContent(imageCount, caption, additionalContext);
-    
-    return `You are an expert digital scrapbook layout designer specializing in romantic couple memories. Your job is to recommend the optimal layout for a memory based on its content.
+private static buildGeminiPrompt(
+  imageCount: number,
+  caption: string,
+  additionalContext?: any
+): string {
+  const context = additionalContext || {};
+  const analysis = this.analyzeContent(imageCount, caption, additionalContext);
+  
+  return `You are an expert digital scrapbook layout designer. Your goal is to create VISUAL VARIETY by choosing different layouts based on content characteristics.
 
-Available layouts and their characteristics:
+IMPORTANT: Avoid repetitive choices. Consider the number of images as the PRIMARY factor, then mood as secondary.
 
-1. COLLAGE
-   - Grid-based layout with 2-4 photos
-   - Decorative tape and washi tape elements
-   - Playful corner decorations (hearts, flowers)
-   - Best for: Multiple casual moments, celebrations, fun activities
-   - Max capacity: 4 images
+Available layouts with CLEAR usage guidelines:
 
-2. POLAROID-STACK
-   - 1-3 overlapping polaroid-style photos
-   - Intimate, nostalgic presentation
-   - Handwritten-style captions
-   - Best for: Romantic moments, dates, intimate memories
-   - Max capacity: 3 images
+1. COLLAGE (Use for 3-4+ images)
+   - Perfect for: Multiple photos, celebrations, group activities
+   - Visual style: Grid-based with decorative elements
+   - When to choose: 3+ images, celebratory content, energetic memories
+   - Capacity: Up to 4 images
 
-3. MAGAZINE
-   - Hero image with thumbnail gallery
-   - Clean, story-focused design
-   - Paper clip and stamp decorations
-   - Best for: Detailed stories, milestones, important events
-   - Max capacity: 5 images
+2. MAGAZINE (Use for detailed stories or 1 main + others)
+   - Perfect for: Long captions, important milestones, hero image + details
+   - Visual style: Featured image with thumbnail gallery
+   - When to choose: Detailed stories, formal events, 1 hero image + smaller ones
+   - Capacity: 1 main + up to 4 smaller images
 
-4. PHOTO-ALBUM
-   - Traditional organized presentation
-   - Formal and classic styling
-   - Best for: Formal events, organized memories
-   - Max capacity: 6 images
+3. POLAROID-STACK (Use sparingly - only for 2-3 intimate photos)
+   - Perfect for: 2-3 photos, very personal moments
+   - Visual style: Overlapping vintage photos
+   - When to choose: ONLY when you have 2-3 images AND very intimate content
+   - Capacity: 2-3 images maximum
 
-5. SCRAPBOOK-MIXED
-   - Creative, varied positioning
-   - Artistic and flexible arrangement
-   - Best for: Travel memories, many photos, artistic presentation
-   - Max capacity: 8 images
+4. PHOTO-ALBUM (Use for organized presentation)
+   - Perfect for: Any number of images, organized memories
+   - Visual style: Clean, traditional layout
+   - When to choose: Formal events, organized presentation needed
+   - Capacity: Multiple images
 
-Analyze this couple's memory and recommend the optimal layout:
+5. SCRAPBOOK-MIXED (Use for many images or creative presentation)
+   - Perfect for: 5+ images, travel, varied content
+   - Visual style: Artistic, flexible positioning
+   - When to choose: Many images, travel memories, artistic needs
+   - Capacity: 5+ images
 
-CONTENT DETAILS:
-- Number of images: ${imageCount}
+DECISION TREE:
+1. If 1 image: Choose between MAGAZINE (detailed story) or PHOTO-ALBUM (simple)
+2. If 2 images: Choose COLLAGE (energetic) or POLAROID-STACK (very intimate only)
+3. If 3-4 images: Prefer COLLAGE or MAGAZINE
+4. If 5+ images: Choose SCRAPBOOK-MIXED or MAGAZINE
+
+CONTENT TO ANALYZE:
+- Images: ${imageCount}
 - Caption: "${caption}"
 - Caption length: ${caption.length} characters
-- Title: "${context.title || 'Untitled'}"
-- Date: ${context.date || 'Not specified'}
-- Location: ${context.location || 'Not specified'}
-- Tags: ${context.tags?.join(', ') || 'None'}
-
-ANALYSIS:
-- Detected tone: ${analysis.captionTone}
 - Memory type: ${analysis.memoryType}
-- Text density: ${analysis.captionLength > 250 ? 'High (needs text-focused layout)' : analysis.captionLength > 120 ? 'Medium' : 'Low'}
-- Emotional indicators: ${this.getEmotionalIndicators(caption)}
+- Tone: ${analysis.captionTone}
 
-Consider:
-- Number of images (visual balance and layout capacity)
-- Caption length (text space requirements)
-- Memory tone and emotional content
-- Memory type and formality level
-- Visual storytelling effectiveness
+VARIETY INSTRUCTION: 
+Consider what layout would create the most engaging visual presentation for THIS specific content. Don't default to the same layout repeatedly.
 
-Respond ONLY with valid JSON in this exact format:
+For ${imageCount} image(s), the best choices are:
+${imageCount === 1 ? '- MAGAZINE (if detailed story) or PHOTO-ALBUM (if simple)' :
+  imageCount === 2 ? '- COLLAGE (if energetic/fun) or POLAROID-STACK (if very intimate)' :
+  imageCount <= 4 ? '- COLLAGE (preferred) or MAGAZINE (if story-heavy)' :
+  '- SCRAPBOOK-MIXED (preferred) or MAGAZINE'}
+
+Choose the layout that will make this memory look most visually appealing and tell the story best.
+
+Respond ONLY with valid JSON:
 {
   "layout": "layout-name",
-  "reasoning": "detailed explanation focusing on why this layout optimizes the visual presentation and emotional impact",
+  "reasoning": "why this layout works best for the visual presentation and story",
   "confidence": 0.85
 }`;
   }

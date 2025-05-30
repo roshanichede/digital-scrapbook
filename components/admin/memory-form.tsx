@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -29,11 +29,14 @@ import { useLayoutRecommendation } from "@/hooks/useLayoutRecommendation";
 import { LayoutType, LayoutAI, StoryEnhancement, CompleteRecommendation } from "@/lib/layoutAI";
 import { DecorationAI, PageDecorations } from "@/lib/decorationAI";
 
+
 const formSchema = z.object({
   title: z.string().min(1, { message: "Title is required" }),
   caption: z.string().min(1, { message: "Caption is required" }),
   date: z.date({ required_error: "Date is required" }),
 });
+
+
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -265,9 +268,9 @@ const StoryEnhancementCard = ({
 export default function MemoryForm() {
   const [loading, setLoading] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
-  const [uploadingAudio, setUploadingAudio] = useState(false);
+  //const [uploadingAudio, setUploadingAudio] = useState(false);
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
+  //const [audioFile, setAudioFile] = useState<File | null>(null);
   const [mediaPreviewUrls, setMediaPreviewUrls] = useState<string[]>([]);
   const [selectedLayout, setSelectedLayout] = useState<LayoutType | null>(null);
   const [showLayoutRecommendation, setShowLayoutRecommendation] = useState(false);
@@ -293,38 +296,144 @@ export default function MemoryForm() {
     },
   });
 
-  const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const filesArray = Array.from(e.target.files);
-      setMediaFiles([...mediaFiles, ...filesArray]);
+const readFileAsDataURL = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      if (e.target?.result && typeof e.target.result === 'string') {
+        resolve(e.target.result);
+      } else {
+        reject(new Error('FileReader failed to produce string result'));
+      }
+    };
+    
+    reader.onerror = () => {
+      reject(new Error('FileReader error'));
+    };
+    
+    reader.readAsDataURL(file);
+  });
+};
+
+const handleMediaChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (e.target.files && e.target.files.length > 0) {
+    const filesArray = Array.from(e.target.files);
+    
+    const validFiles = filesArray.filter(file => {
+      const isImage = file.type.startsWith('image/');
+      const isVideo = file.type.startsWith('video/');
       
-      const newPreviewUrls = filesArray.map((file) => URL.createObjectURL(file));
-      setMediaPreviewUrls([...mediaPreviewUrls, ...newPreviewUrls]);
+      if (!isImage && !isVideo) {
+        toast({
+          title: "Invalid file type",
+          description: `${file.name} is not a supported image or video format`,
+          variant: "destructive",
+        });
+        return false;
+      }
+      return true;
+    });
+
+    if (validFiles.length === 0) return;
+
+    setMediaFiles([...mediaFiles, ...validFiles]);
+    
+    // Create preview URLs with different methods for different file types
+    const newPreviewUrls: string[] = [];
+    
+    for (const file of validFiles) {
+      try {
+        const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
+        
+        if (isPng) {
+          console.log('Processing PNG file with FileReader:', file.name);
+          // Use FileReader for PNG files
+          const dataUrl = await readFileAsDataURL(file);
+          newPreviewUrls.push(dataUrl);
+          console.log('PNG FileReader URL created:', dataUrl.substring(0, 50) + '...');
+        } else {
+          console.log('Processing non-PNG file with blob URL:', file.name);
+          // Use blob URL for other files
+          const blobUrl = URL.createObjectURL(file);
+          newPreviewUrls.push(blobUrl);
+          console.log('Blob URL created:', blobUrl);
+        }
+      } catch (error) {
+        console.error('Failed to create preview for file:', file.name, error);
+        // Fallback to blob URL
+        try {
+          const blobUrl = URL.createObjectURL(file);
+          newPreviewUrls.push(blobUrl);
+        } catch (fallbackError) {
+          console.error('Fallback also failed:', fallbackError);
+        }
+      }
     }
-  };
-
-  const handleRemoveMedia = (index: number) => {
-    const updatedFiles = [...mediaFiles];
-    const updatedPreviews = [...mediaPreviewUrls];
     
-    URL.revokeObjectURL(updatedPreviews[index]);
-    
-    updatedFiles.splice(index, 1);
-    updatedPreviews.splice(index, 1);
-    
-    setMediaFiles(updatedFiles);
-    setMediaPreviewUrls(updatedPreviews);
-  };
+    setMediaPreviewUrls([...mediaPreviewUrls, ...newPreviewUrls]);
+  }
+};
 
-  const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setAudioFile(e.target.files[0]);
-    }
-  };
+const handleRemoveMedia = (index: number) => {
+  const updatedFiles = [...mediaFiles];
+  const updatedPreviews = [...mediaPreviewUrls];
+  
+  // Only revoke blob URLs (data URLs don't need to be revoked)
+  const previewUrl = updatedPreviews[index];
+  if (previewUrl && previewUrl.startsWith('blob:')) {
+    URL.revokeObjectURL(previewUrl);
+  }
+  
+  updatedFiles.splice(index, 1);
+  updatedPreviews.splice(index, 1);
+  
+  setMediaFiles(updatedFiles);
+  setMediaPreviewUrls(updatedPreviews);
+};
 
-  const handleRemoveAudio = () => {
-    setAudioFile(null);
-  };
+useEffect(() => {
+    return () => {
+      // Cleanup blob URLs when component unmounts to prevent memory leaks
+      mediaPreviewUrls.forEach(url => {
+        if (url && url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
+    };
+  }, []); // Empty dependency array means this only runs on unmount
+
+
+const renderImagePreview = (file: File, previewUrl: string, index: number) => {
+  const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png');
+  const isDataUrl = previewUrl.startsWith('data:');
+  
+  return (
+    <img 
+      src={previewUrl}
+      alt={`Preview ${index + 1}`} 
+      className="w-full h-full object-cover"
+      onLoad={(e) => {
+        console.log(`Image ${index} loaded successfully:`, {
+          fileName: file.name,
+          fileType: file.type,
+          isPng,
+          isDataUrl,
+          previewType: isDataUrl ? 'FileReader' : 'BlobURL'
+        });
+      }}
+      onError={(e) => {
+        console.error(`Image ${index} failed to load:`, {
+          fileName: file.name,
+          fileType: file.type,
+          isPng,
+          isDataUrl,
+          previewUrl: previewUrl.substring(0, 50) + '...'
+        });
+      }}
+    />
+  );
+};
 
   // Enhanced function that includes decorations generation
   const handleGetCompleteRecommendation = async () => {
@@ -571,39 +680,6 @@ export default function MemoryForm() {
     }
   };
 
-  const uploadAudio = async (memoryId: string) => {
-    if (!audioFile) return null;
-    
-    setUploadingAudio(true);
-    
-    try {
-      const fileExt = audioFile.name.split('.').pop();
-      const fileName = `${memoryId}/narration_${Date.now()}.${fileExt}`;
-      const filePath = `audio/${fileName}`;
-      
-      const { data, error } = await supabase.storage
-        .from('media')
-        .upload(filePath, audioFile);
-        
-      if (error) throw error;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('media')
-        .getPublicUrl(filePath);
-        
-      return publicUrl;
-    } catch (error: any) {
-      toast({
-        title: "Audio upload failed",
-        description: error.message || "Failed to upload audio",
-        variant: "destructive",
-      });
-      return null;
-    } finally {
-      setUploadingAudio(false);
-    }
-  };
-
   async function onSubmit(values: FormValues) {
     setLoading(true);
     
@@ -635,18 +711,6 @@ export default function MemoryForm() {
         if (mediaError) throw mediaError;
       }
       
-      // Upload audio file if exists
-      const audioUrl = await uploadAudio(memoryData.id);
-      
-      if (audioUrl) {
-        const { error: audioError } = await supabase
-          .from('memories')
-          .update({ audio_url: audioUrl })
-          .eq('id', memoryData.id);
-          
-        if (audioError) throw audioError;
-      }
-      
       toast({
         title: "Memory created",
         description: `Your memory has been saved${selectedLayout ? ` with ${selectedLayout} layout` : ''}${useEnhancedStory ? ' and enhanced story' : ''}${generatedDecorations && useDecorations ? ' and AI decorations' : ''}`,
@@ -661,7 +725,7 @@ export default function MemoryForm() {
       
       setMediaFiles([]);
       setMediaPreviewUrls([]);
-      setAudioFile(null);
+      //setAudioFile(null);
       setSelectedLayout(null);
       setShowLayoutRecommendation(false);
       setShowStoryOptions(false);
@@ -765,90 +829,81 @@ export default function MemoryForm() {
             
             {/* Media Upload */}
             <div className="space-y-4">
-              <div>
-                <FormLabel>Media</FormLabel>
-                <div className="mt-2">
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <label className="cursor-pointer">
-                      <div className="flex flex-col items-center justify-center w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-md border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-rose-500 dark:hover:border-rose-500 transition-colors">
-                        <ImagePlus className="h-6 w-6 text-slate-400" />
-                        <span className="text-xs text-slate-500 mt-1">Add Media</span>
-                      </div>
-                      <Input
-                        type="file"
-                        accept="image/*,video/*"
-                        className="hidden"
-                        onChange={handleMediaChange}
-                        multiple
-                      />
-                    </label>
-                    
-                    {mediaPreviewUrls.map((url, index) => (
-                      <div key={index} className="relative w-24 h-24">
-                        <div className="w-full h-full bg-slate-100 dark:bg-slate-800 rounded-md overflow-hidden">
-                          <img 
-                            src={url} 
-                            alt={`Preview ${index}`} 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                          onClick={() => handleRemoveMedia(index)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  You can upload multiple images and videos
-                </p>
+  <div>
+    <FormLabel>Media</FormLabel>
+    <div className="mt-2">
+      <div className="flex items-center gap-4 flex-wrap">
+        <label className="cursor-pointer">
+          <div className="flex flex-col items-center justify-center w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-md border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-rose-500 dark:hover:border-rose-500 transition-colors">
+            <ImagePlus className="h-6 w-6 text-slate-400" />
+            <span className="text-xs text-slate-500 mt-1">Add Media</span>
+          </div>
+          <Input
+            type="file"
+            accept="image/*,video/*"
+            className="hidden"
+            onChange={handleMediaChange}
+            multiple
+          />
+        </label>
+        
+        {mediaPreviewUrls.map((url, index) => {
+          const file = mediaFiles[index];
+          const isVideo = file?.type.startsWith('video/');
+          
+          console.log('Rendering preview:', index, url, isVideo); // Debug log
+          
+          return (
+            <div key={index} className="relative w-24 h-24">
+              <div className="w-full h-full bg-slate-100 dark:bg-slate-800 rounded-md overflow-hidden border">
+                {isVideo ? (
+                  <video 
+                    src={url} 
+                    className="w-full h-full object-cover"
+                    muted
+                    preload="metadata"
+                    onError={(e) => {
+                      console.error('Video preview error:', e);
+                    }}
+                  />
+                ) : (
+                  <img 
+                    src={url} 
+                    alt={`Preview ${index + 1}`} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Image preview error:', e);
+                    }}
+                    onLoad={() => {
+                      console.log('Image loaded successfully:', index);
+                    }}
+                  />
+                )}
               </div>
-              
-              {/* Audio Upload */}
-              <div>
-                <FormLabel>Audio Narration</FormLabel>
-                <div className="mt-2">
-                  {!audioFile ? (
-                    <label className="cursor-pointer">
-                      <div className="flex items-center justify-center px-4 py-2 bg-slate-100 dark:bg-slate-800 rounded-md border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-rose-500 dark:hover:border-rose-500 transition-colors">
-                        <FileAudio className="h-4 w-4 text-slate-400 mr-2" />
-                        <span className="text-sm text-slate-500">Add Audio Narration</span>
-                      </div>
-                      <Input
-                        type="file"
-                        accept="audio/*"
-                        className="hidden"
-                        onChange={handleAudioChange}
-                      />
-                    </label>
-                  ) : (
-                    <div className="flex items-center justify-between bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-md">
-                      <span className="text-sm truncate max-w-[200px]">
-                        {audioFile.name}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive"
-                        onClick={handleRemoveAudio}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Upload an audio narration to accompany this memory
-                </p>
+              <Button
+                type="button"
+                variant="destructive"
+                size="icon"
+                className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                onClick={() => handleRemoveMedia(index)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
+              {/* File type indicator */}
+              <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1 rounded">
+                {isVideo ? 'VID' : 'IMG'}
               </div>
             </div>
+          );
+        })}
+      </div>
+    </div>
+    <p className="text-xs text-muted-foreground mt-2">
+      You can upload multiple images and videos. Supported formats: JPG, PNG, MP4, MOV
+    </p>
+  </div>
+</div>
+
 
             {/* AI Enhancement Section */}
             <Card className="border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50">
@@ -881,23 +936,12 @@ export default function MemoryForm() {
                   <div className="space-y-3">
                     <Button
                       type="button"
-                      onClick={handleGetLayoutRecommendation}
-                      disabled={mediaFiles.length === 0 || !form.getValues('caption')?.trim()}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <Sparkles className="w-4 h-4 mr-2" />
-                      Get Layout Recommendation
-                    </Button>
-                    
-                    <Button
-                      type="button"
                       onClick={handleGetCompleteRecommendation}
                       disabled={mediaFiles.length === 0 || !form.getValues('caption')?.trim()}
                       className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
                     >
                       <Sparkles className="w-4 h-4 mr-2" />
-                      ✨ Get Layout + Enhanced Story{useDecorations ? ' + Decorations' : ''}
+                      ✨ Enhance with AI
                     </Button>
                   </div>
                 )}
@@ -1008,25 +1052,38 @@ export default function MemoryForm() {
                 )}
               </CardContent>
             </Card>
-            
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={loading || uploadingMedia || uploadingAudio}
-            >
-              {loading || uploadingMedia || uploadingAudio ? (
-                <>
-                  <div className="w-4 h-4 rounded-full border-2 border-white border-t-transparent animate-spin mr-2"></div>
-                  {uploadingMedia ? 'Uploading media...' : 
-                   uploadingAudio ? 'Uploading audio...' : 'Creating memory...'}
-                </>
-              ) : (
-                <>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Memory
-                </>
+            {/* Submit Button */}
+            <div className="pt-4">
+              <Button
+                type="submit"
+                disabled={loading || uploadingMedia}
+                className="w-full bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 text-white py-3 text-lg font-semibold"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Creating Memory...
+                  </>
+                ) : uploadingMedia ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Uploading Media...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-5 h-5 mr-2" />
+                    Create Memory
+                  </>
+                )}
+              </Button>
+              
+              {/* Form validation helper text */}
+              {(!form.getValues('title') || !form.getValues('caption') || mediaFiles.length === 0) && (
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  Please add a title, caption, and at least one image to create your memory
+                </p>
               )}
-            </Button>
+            </div>
           </form>
         </Form>
       </CardContent>

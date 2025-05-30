@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X, StickyNote as StickyNoteIcon } from 'lucide-react';
 import { Memory } from '@/types';
 import { supabase } from '@/lib/supabase';
@@ -22,6 +22,8 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+   const [playingVideo, setPlayingVideo] = useState<string | null>(null);
+  const videoRefsMap = useRef<{[key: string]: HTMLVideoElement}>({});
   
   const totalPages = memories.length;
 
@@ -31,6 +33,71 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
     getNotesForMemory,
     stickyNotes 
   } = useStickyNotes();
+
+  const handleVideoClick = (videoUrl: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    setZoomedImage(videoUrl);
+  };
+
+  // Function to register video refs
+  const registerVideoRef = (url: string, element: HTMLVideoElement | null) => {
+    if (element) {
+      videoRefsMap.current[url] = element;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      // Cleanup: pause all videos when component unmounts
+      Object.values(videoRefsMap.current).forEach(video => {
+        if (!video.paused) {
+          video.pause();
+        }
+      });
+    };
+  }, []);
+
+const ZoomedVideoView = ({ videoUrl, onClose }: { videoUrl: string; onClose: () => void }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [onClose]);
+  
+  return (
+    <div 
+      className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-8"
+      onClick={onClose}
+    >
+      <div className="relative w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+        <video
+          ref={videoRef}
+          src={videoUrl}
+          className="max-w-full max-h-full rounded-lg shadow-2xl"
+          style={{
+            objectFit: 'contain', // Maintain original aspect ratio
+            backgroundColor: '#000'
+          }}
+          controls
+          autoPlay
+          onError={(e) => console.error('Zoomed video error:', e)}
+        />
+        
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-white hover:text-gray-300 text-3xl bg-black/50 hover:bg-black/70 rounded-full w-12 h-12 flex items-center justify-center transition-all"
+        >
+          ✕
+        </button>
+      </div>
+    </div>
+  );
+};
 
   // Fetch memories from Supabase
   useEffect(() => {
@@ -695,98 +762,154 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
     return layouts[pageIndex % layouts.length];
   };
 
-  const renderScrapbookPage = (memory: Memory, pageIndex: number) => {
-    const layout = getPageLayout(memory, pageIndex);
-    const photos = memory.media?.filter(item => item.type === 'image') || [];
-    const pageNotes = getNotesForMemory(memory.id || '');
-    
-    return (
+const renderScrapbookPage = (memory: Memory, pageIndex: number) => {
+  const layout = getPageLayout(memory, pageIndex);
+  //const photos = memory.media?.filter(item => item.type === 'image') || [];
+  const allMedia = memory.media || [];
+  const pageNotes = getNotesForMemory(memory.id || '');
+  
+  return (
     <div className="relative w-full h-full">
-      {/* Content Layer - BOTTOM layer */}
-      <div className="relative z-0 w-full h-full">
-        {renderLayoutContent(layout, memory, photos, pageIndex)}
+      {/* Content Layer with CLICKABLE IMAGES - Bottom layer */}
+      <div className="relative z-10 w-full h-full">
+        {renderLayoutContent(layout, memory, allMedia, pageIndex)}
       </div>
       
-      {/* Sticky Notes Layer - MIDDLE layer */}
-      <div className="absolute inset-0 z-40">
-        <div 
-          className="relative w-full h-full"
-          style={{
-            // Ensure the container has proper bounds for sticky note positioning
-            minHeight: '100%',
-            minWidth: '100%'
-          }}
-        >
-          {pageNotes.map((note) => (
-            <StickyNote key={note.id} note={note} />
-          ))}
-        </div>
-      </div>
-      
-      {/* AI Decorations Layer - TOPMOST layer over everything */}
-      <div className="absolute inset-0 z-50 pointer-events-none">
+      {/* AI Decorations Layer - MIDDLE layer (over images) */}
+      <div className="absolute inset-0 z-40 pointer-events-none">
         {renderAIDecorations(memory, layout)}
+      </div>
+      
+      {/* Sticky Notes Layer - TOP layer (over everything) */}
+      <div 
+        className="absolute inset-0 z-50"
+        style={{
+          minHeight: '100%',
+          minWidth: '100%',
+          pointerEvents: 'none' // Container doesn't block clicks
+        }}
+      >
+        {pageNotes.map((note) => (
+          <div 
+            key={note.id} 
+            className="absolute"
+            style={{
+              pointerEvents: 'auto', // Individual sticky notes ARE clickable
+              zIndex: 51 // Highest to ensure they're on top
+            }}
+          >
+            <StickyNote note={note} />
+          </div>
+        ))}
       </div>
     </div>
   );
-  };
+};
 
-  const renderLayoutContent = (layout: string, memory: Memory, photos: any[], pageIndex: number) => {
+  const renderLayoutContent = (layout: string, memory: Memory, media: any[], pageIndex: number) => {
     switch(layout) {
       case 'collage':
-        return (
-          <div className="relative w-full h-full p-8">
-            {/* Background decorations */}
-            <div className="absolute top-4 right-8 w-16 h-6 bg-yellow-200 opacity-70 rotate-12 z-0" 
-                 style={{ clipPath: 'polygon(0 0, 90% 0, 100% 50%, 90% 100%, 0 100%)' }} />
-            <div className="absolute bottom-12 left-12 text-4xl opacity-20 z-0">♡</div>
-            <div className="absolute top-20 right-16 text-2xl opacity-30 rotate-45 z-0">✿</div>
-            
-            <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
-              {photos.slice(0, 4).map((photo, idx) => (
-                <div 
-                  key={photo.id || idx}
-                  className={`relative bg-white p-3 shadow-lg cursor-pointer transform transition-all hover:scale-105 z-10 ${
-                    idx % 2 === 0 ? 'rotate-2' : '-rotate-1'
-                  }`}
-                  onClick={() => setZoomedImage(photo.url)}
-                >
-                  <div className="relative w-full h-32">
-                    <Image
-                      src={photo.url}
-                      alt={photo.alt_text || ''}
-                      fill
-                      className="object-cover"
+  return (
+    <div className="relative w-full h-full p-6">
+      {/* Background decorations */}
+      <div className="absolute top-2 right-4 w-12 h-4 bg-yellow-200 opacity-70 rotate-12 z-0" 
+           style={{ clipPath: 'polygon(0 0, 90% 0, 100% 50%, 90% 100%, 0 100%)' }} />
+      <div className="absolute bottom-24 left-4 text-2xl opacity-20 z-0">♡</div>
+      <div className="absolute top-16 right-8 text-xl opacity-30 rotate-45 z-0">✿</div>
+      
+      {/* 2x2 Grid with fixed dimensions */}
+      <div className="grid grid-cols-2 gap-4 mb-6 relative z-10">
+        {media.slice(0, 4).map((item, idx) => {
+          const isVideo = item.type === 'video';
+          const isPlaying = playingVideo === item.url;
+          
+          return (
+            <div 
+              key={item.id || idx}
+              className={`relative bg-white p-3 shadow-lg transform transition-all hover:scale-105 z-10 ${
+                idx % 2 === 0 ? 'rotate-1' : '-rotate-1'
+              }`}
+              style={{
+                width: '240px',  // FIXED WIDTH
+                height: '200px', // FIXED HEIGHT
+                margin: '0 auto'
+              }}
+            >
+              <div 
+                className="relative w-full bg-gray-100 rounded overflow-hidden"
+                style={{
+                  height: '140px' // FIXED INNER HEIGHT
+                }}
+              >
+                {isVideo ? (
+                  <>
+                    <video
+                      ref={(el) => registerVideoRef(item.url, el)}
+                      src={item.url}
+                      className="w-full h-full object-cover rounded cursor-pointer"
+                      muted={false}
+                      preload="metadata"
+                      controls={isPlaying}
+                      onClick={(e) => handleVideoClick(item.url, e)}
+                      onEnded={() => setPlayingVideo(null)}
                     />
                     
-                    {/* Tape positioned INSIDE the image area */}
-                    <div className={`absolute w-8 h-4 bg-yellow-100/95 rotate-45 z-20 shadow-md ${
-                      idx % 4 === 0 ? 'top-2 left-2' :
-                      idx % 4 === 1 ? 'top-2 right-2' :
-                      idx % 4 === 2 ? 'bottom-2 left-2' :
-                      'bottom-2 right-2'
-                    }`} 
-                    style={{
-                      background: 'linear-gradient(135deg, rgba(255,255,224,0.95) 0%, rgba(255,255,193,0.95) 100%)',
-                      boxShadow: '0 3px 6px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.8)',
-                      border: '1px solid rgba(255,215,0,0.3)'
-                    }} />
-                  </div>
-                  
-                  <p className="text-xs text-gray-600 mt-2 font-handwriting text-center">
-                    {format(new Date(memory.date), 'MMM d')}
-                  </p>
-                </div>
-              ))}
-            </div>
-            
-            <div className="bg-pink-50 p-4 transform rotate-1 border-l-4 border-pink-300 relative z-10">
-              <p className="font-handwriting text-lg text-gray-700 leading-relaxed">
-                {memory.caption}
+                    {!isPlaying && (
+                      <div 
+                        className="absolute inset-0 flex items-center justify-center bg-black/20 hover:bg-black/30 transition-all cursor-pointer"
+                        onClick={(e) => handleVideoClick(item.url, e)}
+                      >
+                        <div className="bg-white/90 rounded-full p-3 shadow-lg hover:scale-110 transition-transform">
+                          <svg className="w-6 h-6 text-gray-800" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 5v10l8-5-8-5z"/>
+                          </svg>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                      VID
+                    </div>
+                  </>
+                ) : (
+                  <img
+                    src={item.url}
+                    alt={item.alt_text || ''}
+                    className="w-full h-full object-cover rounded cursor-pointer"
+                    onClick={() => setZoomedImage(item.url)}
+                  />
+                )}
+                
+                {/* Tape */}
+                <div className={`absolute w-6 h-3 bg-yellow-100/95 rotate-45 z-20 shadow-md ${
+                  idx % 4 === 0 ? 'top-2 left-2' :
+                  idx % 4 === 1 ? 'top-2 right-2' :
+                  idx % 4 === 2 ? 'bottom-2 left-2' :
+                  'bottom-2 right-2'
+                }`} 
+                style={{
+                  background: 'linear-gradient(135deg, rgba(255,255,224,0.95) 0%, rgba(255,255,193,0.95) 100%)',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.8)',
+                  border: '1px solid rgba(255,215,0,0.3)'
+                }} />
+              </div>
+              
+              <p className="text-xs text-gray-600 mt-2 font-handwriting text-center">
+                {format(new Date(memory.date), 'MMM d')}
               </p>
             </div>
-          </div>
-        );
+          );
+        })}
+      </div>
+      
+      {/* Caption at bottom */}
+      <div className="bg-pink-50 p-4 border-l-4 border-pink-300 relative z-10 rounded-sm">
+        <p className="font-handwriting text-base text-gray-700 leading-relaxed">
+          {memory.caption}
+        </p>
+      </div>
+    </div>
+  );
 
       case 'polaroid-stack':
         return (
@@ -795,23 +918,38 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
             <div className="absolute top-0 left-20 w-32 h-6 bg-gradient-to-r from-pink-200 to-pink-300 opacity-70 -rotate-12 z-0" />
             
             <div className="flex flex-wrap gap-6 mt-8 relative z-10">
-              {photos.slice(0, 3).map((photo, idx) => (
+              {media.slice(0, 3).map((item, idx) => (
                 <div 
-                  key={photo.id || idx}
+                  key={item.id || idx}
                   className={`relative bg-white p-4 pb-12 shadow-xl cursor-pointer transform transition-all hover:scale-105 z-10 ${
                     idx === 0 ? 'rotate-3 z-30' : 
                     idx === 1 ? '-rotate-2 z-20 ml-8' : 
                     'rotate-1 z-10 -ml-12'
                   }`}
-                  onClick={() => setZoomedImage(photo.url)}
+                  onClick={() => setZoomedImage(item.url)}
                 >
-                  <Image
-                    src={photo.url}
-                    alt={photo.alt_text || ''}
-                    width={180}
-                    height={180}
-                    className="object-cover w-60 h-60"
-                  />
+                  <div className="w-60 h-60 bg-gray-100 rounded">
+                  {item.type === 'video' ? (
+                    <video
+                      src={item.url}
+                      className="w-full h-full object-cover rounded"
+                      muted
+                      preload="metadata"
+                      onError={(e) => console.error('Video error:', e)}
+                    />
+                  ) : (
+                    <img
+                      src={item.url}
+                      alt={item.alt_text || ''}
+                      className="w-full h-full object-cover rounded"
+                      onError={(e) => {
+                        console.error('Image error:', e);
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  )}
+                </div>
+                
                   
                   <p className="text-sm text-gray-700 mt-3 font-handwriting text-center">
                     Memory #{idx + 1}
@@ -838,15 +976,15 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
             <div className="absolute top-4 left-4 w-8 h-8 border-l-4 border-t-4 border-pink-400 z-0" />
             <div className="absolute top-4 right-4 w-8 h-8 border-r-4 border-t-4 border-pink-400 z-0" />
             
-            {photos.length > 0 && (
+            {media.length > 0 && (
               <div className="relative mb-4 mt-4 z-10">
                 <div 
-                  className="relative w-full h-48 cursor-pointer group z-10"
-                  onClick={() => setZoomedImage(photos[0].url)}
+                  className="relative w-full h-96 cursor-pointer group z-10"
+                  onClick={() => setZoomedImage(media[0].url)}
                 >
                   <Image
-                    src={photos[0].url}
-                    alt={photos[0].alt_text || ''}
+                    src={media[0].url}
+                    alt={media[0].alt_text || ''}
                     fill
                     className="object-cover rounded-lg shadow-lg group-hover:shadow-xl transition-all"
                   />
@@ -857,15 +995,15 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
                 </div>
                 
                 <div className="flex gap-4 mt-4">
-                  {photos.slice(1, 3).map((photo, idx) => (
+                  {media.slice(1, 3).map((item, idx) => (
                     <div 
-                      key={photo.id || idx}
+                      key={item.id || idx}
                       className="relative w-24 h-24 cursor-pointer transform hover:scale-110 transition-all z-10"
-                      onClick={() => setZoomedImage(photo.url)}
+                      onClick={() => setZoomedImage(item.url)}
                     >
                       <Image
-                        src={photo.url}
-                        alt={photo.alt_text || ''}
+                        src={item.url}
+                        alt={item.alt_text || ''}
                         fill
                         className="object-cover rounded shadow-md"
                       />
@@ -901,23 +1039,45 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
             <div className="absolute top-2 left-8 w-24 h-6 bg-blue-200 opacity-60 transform -rotate-6 z-0" />
             
             <div className="space-y-2 mt-8 relative z-10">
-              {photos.map((photo, idx) => (
+              {media.map((item, idx) => (
                 <div 
-                  key={photo.id || idx}
+                  key={item.id || idx}
                   className={`relative inline-block bg-white p-4 shadow-lg cursor-pointer transform transition-all hover:scale-105 z-10 ${
                     idx % 3 === 0 ? 'rotate-2 ml-8' : 
                     idx % 3 === 1 ? '-rotate-1 mr-8' : 
                     'rotate-1'
                   }`}
-                  onClick={() => setZoomedImage(photo.url)}
+                  onClick={() => setZoomedImage(item.url)}
                 >
-                  <div className="relative w-[250px] h-[200px]">
-                    <Image
-                      src={photo.url}
-                      alt={photo.alt_text || ''}
-                      fill
-                      className="object-cover"
+                  <div className="relative w-[250px] h-[200px] bg-gray-100 rounded overflow-hidden">
+                  {item.type === 'video' ? (
+                    <>
+                      <video
+                        src={item.url}
+                        className="w-full h-full object-cover"
+                        muted
+                        preload="metadata"
+                        onError={(e) => console.error('Video error:', e)}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="bg-black/50 rounded-full p-3">
+                          <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 5v10l8-5-8-5z"/>
+                          </svg>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <img
+                      src={item.url}
+                      alt={item.alt_text || ''}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('Image error:', e);
+                        e.currentTarget.style.display = 'none';
+                      }}
                     />
+                  )}
                     
                     <div className={`absolute w-10 h-5 bg-green-200/95 rotate-45 z-20 shadow-md ${
                       idx % 4 === 0 ? 'top-3 left-3' :
@@ -982,7 +1142,7 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
         }
       `}</style>
       
-      <div className="relative w-[900px] h-[750px]" style={{ perspective: '2000px' }}>
+      <div className="relative w-[900px] h-[800px]" style={{ perspective: '2000px' }}>
         
         {/* Metallic Wire Spiral Binding */}
         <div className="absolute left-0 top-0 bottom-0 w-16 z-30">
@@ -1186,6 +1346,14 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
 
       {/* Image Zoom Modal */}
       {zoomedImage && (
+    <>
+      {/* Check if it's a video by URL extension or type */}
+      {(zoomedImage.includes('.mp4') || zoomedImage.includes('.mov') || zoomedImage.includes('.webm') || zoomedImage.includes('.avi')) ? (
+        <ZoomedVideoView 
+          videoUrl={zoomedImage} 
+          onClose={() => setZoomedImage(null)} 
+        />
+      ) : (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
           <div className="relative max-w-4xl max-h-full">
             <button
@@ -1204,6 +1372,8 @@ const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {
           </div>
         </div>
       )}
+    </>
+  )}
 
       {/* Sticky Notes Modal */}
       {currentMemory && <StickyNotesModal memoryId={currentMemory.id || ''} />}

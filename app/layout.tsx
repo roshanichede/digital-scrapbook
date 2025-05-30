@@ -26,8 +26,8 @@ const kalam = Kalam({
 });
 
 export const metadata: Metadata = {
-  title: 'Our Six Month Anniversary',
-  description: 'A digital scrapbook of our memories together',
+  title: 'Our Beautiful Journey',
+  description: 'A digital collection of our treasured memories and shared adventures',
 };
 
 export default function RootLayout({
