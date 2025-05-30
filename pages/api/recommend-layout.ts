@@ -1,6 +1,6 @@
 // pages/api/recommend-layout.ts
 import { NextApiRequest, NextApiResponse } from 'next';
-import { LayoutAI } from '@/lib/layoutAI';
+import { LayoutAI } from '@/lib/LayoutAI';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Only allow POST requests
