@@ -13,6 +13,7 @@ import { useStickyNotes, StickyNote, StickyNotesModal } from '../StickyNotes';
 
 interface DigitalBookProps {
   coverImage?: string;
+  projectId?: string;
 }
 
 const DigitalBook: React.FC<DigitalBookProps> = ({ coverImage }) => {

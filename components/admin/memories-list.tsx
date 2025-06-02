@@ -33,7 +33,11 @@ import { formatDistanceToNow } from "date-fns";
 import { MoreHorizontal, Trash2, Edit, Eye } from "lucide-react";
 import { Card } from "../ui/card";
 
-export default function MemoriesList() {
+interface MemoriesListProps {
+  projectId?: string;
+}
+
+export default function MemoriesList({ projectId }: MemoriesListProps) {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleteId, setDeleteId] = useState<string | null>(null);

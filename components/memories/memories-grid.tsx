@@ -12,9 +12,10 @@ import { motion } from 'framer-motion';
 
 interface MemoriesGridProps {
   viewType: 'grid' | 'timeline';
+  projectId?: string;
 }
 
-export default function MemoriesGrid({ viewType }: MemoriesGridProps) {
+export default function MemoriesGrid({ viewType, projectId }: MemoriesGridProps) {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [loading, setLoading] = useState(true);
 

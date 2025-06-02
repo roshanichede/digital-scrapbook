@@ -10,9 +10,12 @@ import Link from 'next/link';
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Button } from "@/components/ui/button";
+import { useSearchParams } from 'next/navigation';
 
 function StorybookContent() {
   const { user, signOut } = useAuth();
+  const searchParams = useSearchParams();
+  const projectId = searchParams?.get('projectId');
 
   return (
     <StickyNotesProvider>
@@ -20,10 +23,12 @@ function StorybookContent() {
         {/* Top Navigation Bar */}
         <div className="fixed top-6 left-6 right-6 z-50 flex items-center justify-between">
           {/* Back Button */}
-          <Link href="/" className="inline-flex">
+          <Link href={projectId ? `/project/${projectId}` : "/"} className="inline-flex">
             <button className="bg-white/90 hover:bg-white shadow-lg p-3 rounded-full transition-all flex items-center gap-2 text-gray-700 hover:text-gray-900 backdrop-blur-sm">
               <ArrowLeft size={20} />
-              <span className="text-sm font-medium hidden md:inline">Back to Home</span>
+              <span className="text-sm font-medium hidden md:inline">
+                {projectId ? 'Back to Project' : 'Back to Home'}
+              </span>
             </button>
           </Link>
 
@@ -62,7 +67,7 @@ function StorybookContent() {
                 </TabsList>
               </div>
 
-              <DigitalBook />
+              <DigitalBook projectId={projectId || undefined} />
             </div>
           </TabsContent>
           
@@ -98,13 +103,13 @@ function StorybookContent() {
                     Our Story
                   </h1>
                   <p className="font-handwriting text-xl md:text-2xl text-rose-500 mb-8">
-                    Six beautiful months of us
+                    Beautiful memories together
                   </p>
                   <Separator className="max-w-md mx-auto" />
                 </header>
                 
                 <div className="space-y-8">
-                  <MemoriesGrid viewType="timeline" />
+                  <MemoriesGrid viewType="timeline" projectId={projectId || undefined} />
                 </div>
               </div>
             </div>

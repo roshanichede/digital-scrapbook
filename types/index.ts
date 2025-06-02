@@ -1,3 +1,12 @@
+export interface Project {
+  id: string;
+  title: string;
+  type: 'birthday' | 'anniversary' | 'other';
+  description?: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
 export interface Memory {
   id: string;
   title: string;

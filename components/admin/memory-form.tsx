@@ -37,6 +37,11 @@ const formSchema = z.object({
 });
 
 
+interface MemoryFormProps {
+  projectId?: string;
+  onSuccess?: () => void;
+}
+
 
 type FormValues = z.infer<typeof formSchema>;
 
@@ -265,7 +270,7 @@ const StoryEnhancementCard = ({
   );
 };
 
-export default function MemoryForm() {
+export default function MemoryForm({ projectId, onSuccess }: MemoryFormProps) {
   const [loading, setLoading] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   //const [uploadingAudio, setUploadingAudio] = useState(false);
