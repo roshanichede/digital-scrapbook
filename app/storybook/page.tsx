@@ -1,32 +1,55 @@
+"use client";
+
 import MemoriesGrid from "@/components/memories/memories-grid";
 import DigitalBook from "@/components/memories/digital-book";
-import { Suspense } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import PageLoader from "@/components/ui/page-loader";
 import { Separator } from "@/components/ui/separator";
-import { Book, Calendar, ArrowLeft } from "lucide-react";
+import { Book, Calendar, ArrowLeft, LogOut } from "lucide-react";
 import { StickyNotesProvider } from '@/components/StickyNotes';
 import Link from 'next/link';
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { Button } from "@/components/ui/button";
 
-export default function StorybookPage() {
+function StorybookContent() {
+  const { user, signOut } = useAuth();
+
   return (
     <StickyNotesProvider>
       <div className="relative min-h-screen">
-        {/* Back Button - Fixed position on all tabs */}
-        <div className="fixed top-6 right-6 z-50">
+        {/* Top Navigation Bar */}
+        <div className="fixed top-6 left-6 right-6 z-50 flex items-center justify-between">
+          {/* Back Button */}
           <Link href="/" className="inline-flex">
             <button className="bg-white/90 hover:bg-white shadow-lg p-3 rounded-full transition-all flex items-center gap-2 text-gray-700 hover:text-gray-900 backdrop-blur-sm">
               <ArrowLeft size={20} />
               <span className="text-sm font-medium hidden md:inline">Back to Home</span>
             </button>
           </Link>
+
+          {/* User info and logout */}
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-slate-600 dark:text-slate-400 bg-white/90 dark:bg-slate-800/90 px-3 py-2 rounded-full backdrop-blur-sm shadow-lg">
+              {user?.email}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={signOut}
+              className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm shadow-lg"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              <span className="hidden md:inline">Sign Out</span>
+            </Button>
+          </div>
         </div>
+
         <Tabs defaultValue="book" className="w-full h-screen">
           <TabsContent value="book" className="h-full m-0 p-0">
             {/* Full-screen book view */}
             <div className="relative h-full">
               {/* View Toggle - Floating over the book */}
-              <div className="absolute top-8 left-8 z-30">
+              <div className="absolute top-24 left-8 z-30">
                 <TabsList className="bg-white/90 backdrop-blur-sm shadow-lg">
                   <TabsTrigger value="book" className="gap-2">
                     <Book className="h-4 w-4" />
@@ -39,9 +62,7 @@ export default function StorybookPage() {
                 </TabsList>
               </div>
 
-              <Suspense fallback={<PageLoader />}>
-                <DigitalBook />
-              </Suspense>
+              <DigitalBook />
             </div>
           </TabsContent>
           
@@ -59,7 +80,7 @@ export default function StorybookPage() {
               
               <div className="container mx-auto px-4 py-8 relative z-10">
                 {/* View Toggle */}
-                <div className="flex justify-center mb-8">
+                <div className="flex justify-center mb-8 pt-16">
                   <TabsList>
                     <TabsTrigger value="book" className="gap-2">
                       <Book className="h-4 w-4" />
@@ -83,9 +104,7 @@ export default function StorybookPage() {
                 </header>
                 
                 <div className="space-y-8">
-                  <Suspense fallback={<PageLoader />}>
-                    <MemoriesGrid viewType="timeline" />
-                  </Suspense>
+                  <MemoriesGrid viewType="timeline" />
                 </div>
               </div>
             </div>
@@ -93,5 +112,13 @@ export default function StorybookPage() {
         </Tabs>
       </div>
     </StickyNotesProvider>
+  );
+}
+
+export default function StorybookPage() {
+  return (
+    <ProtectedRoute>
+      <StorybookContent />
+    </ProtectedRoute>
   );
 }

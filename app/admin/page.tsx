@@ -2,82 +2,16 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-//import { Tabs, TabsContent, TabsList, TabsItem } from "@/components/ui/tabs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
-import { User } from "@/types";
 import { Separator } from "@/components/ui/separator";
-import LoginForm from "@/components/admin/login-form";
 import MemoryForm from "@/components/admin/memory-form";
 import MemoriesList from "@/components/admin/memories-list";
-import { LockKeyhole, PlusCircle, ListChecks } from "lucide-react";
+import { PlusCircle, ListChecks } from "lucide-react";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { useAuth } from "@/components/providers/AuthProvider";
 
-export default function AdminPage() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function getUser() {
-      setLoading(true);
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        setUser({
-          id: user.id,
-          email: user.email || "",
-        });
-      }
-      
-      setLoading(false);
-    }
-    
-    getUser();
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || "",
-          });
-        } else {
-          setUser(null);
-        }
-      }
-    );
-    
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 rounded-full border-4 border-rose-500 border-t-transparent animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
-        <Card className="w-full max-w-md shadow-lg">
-          <CardHeader className="text-center">
-            <CardTitle className="font-serif text-2xl">Admin Access</CardTitle>
-            <CardDescription>
-              Sign in to manage memory entries
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <LoginForm onLogin={(user) => setUser(user)} />
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+function AdminPageContent() {
+  const { user, signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
@@ -88,14 +22,11 @@ export default function AdminPage() {
           </h1>
           <div className="flex items-center justify-between">
             <p className="text-slate-600 dark:text-slate-400">
-              Logged in as {user.email}
+              Logged in as {user?.email}
             </p>
             <Button
               variant="ghost"
-              onClick={async () => {
-                await supabase.auth.signOut();
-                setUser(null);
-              }}
+              onClick={signOut}
             >
               Sign Out
             </Button>
@@ -125,5 +56,13 @@ export default function AdminPage() {
         </Tabs>
       </div>
     </div>
+  );
+}
+
+export default function AdminPage() {
+  return (
+    <ProtectedRoute>
+      <AdminPageContent />
+    </ProtectedRoute>
   );
 }

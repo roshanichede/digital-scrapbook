@@ -1,215 +1,389 @@
 "use client";
 
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import Link from "next/link";
-import { ArrowRight, Heart, Gift } from "lucide-react";
-import { useState, useEffect } from "react";
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { useAuth } from '@/components/providers/AuthProvider';
+import { useState, useEffect } from 'react';
+import { Plus, Heart, Gift, Camera, BookOpen, Calendar, Eye, Settings } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { Memory } from '@/types';
+import { useRouter } from 'next/navigation';
+import DigitalBook from '@/components/memories/digital-book';
+import MemoriesGrid from '@/components/memories/memories-grid';
+import MemoryForm from '@/components/admin/memory-form';
 
 export default function Home() {
-  const [timeData, setTimeData] = useState({
-    months: 0,
-    weeks: 0,
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-    totalDays: 0
-  });
+  return (
+    <ProtectedRoute>
+      <ScrapbookDashboard />
+    </ProtectedRoute>
+  );
+}
 
+function ScrapbookDashboard() {
+  const { user, signOut } = useAuth();
+  const [currentView, setCurrentView] = useState<'dashboard' | 'book' | 'grid' | 'create' | 'admin'>('dashboard');
+  const [projects, setProjects] = useState<any[]>([]);
+  const [memories, setMemories] = useState<Memory[]>([]);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  // Fetch memories from your existing system
   useEffect(() => {
-    const calculateTime = () => {
-      const startDate = new Date('2024-11-28T18:30:00');
-      const now = new Date();
-      const diffMs = now.getTime() - startDate.getTime();
-      
-      const totalSeconds = Math.floor(diffMs / 1000);
-      const totalMinutes = Math.floor(totalSeconds / 60);
-      const totalHours = Math.floor(totalMinutes / 60);
-      const totalDays = Math.floor(totalHours / 24);
-      
-      const months = Math.floor(totalDays / 30.44); // Average month length
-      const remainingDaysAfterMonths = totalDays - Math.floor(months * 30.44);
-      const weeks = Math.floor(remainingDaysAfterMonths / 7);
-      const days = remainingDaysAfterMonths % 7;
-      
-      const hours = totalHours % 24;
-      const minutes = totalMinutes % 60;
-      const seconds = totalSeconds % 60;
-      
-      setTimeData({
-        months,
-        weeks,
-        days: Math.floor(days),
-        hours,
-        minutes,
-        seconds,
-        totalDays
-      });
-    };
-
-    calculateTime();
-    const interval = setInterval(calculateTime, 1000);
-    
-    return () => clearInterval(interval);
+    fetchMemories();
   }, []);
 
-  return (
-    <div className="relative min-h-screen bg-gradient-to-b from-rose-50 to-slate-50 dark:from-slate-950 dark:to-slate-900 overflow-hidden">
-      {/* Floating hearts animation */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {[...Array(8)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute text-rose-300 dark:text-rose-700 opacity-40"
-            style={{
-              left: `${10 + (i * 12)}%`,
-              animation: `floatUp ${8 + (i % 3) * 2}s ease-in-out infinite`,
-              animationDelay: `${i * 1.2}s`
-            }}
-          >
-            <Heart className="w-5 h-5" fill="currentColor" />
-          </div>
-        ))}
-      </div>
-
-      {/* Decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-pink-200 opacity-20 blur-3xl dark:bg-pink-900"></div>
-        <div className="absolute top-1/2 -right-24 w-96 h-96 rounded-full bg-blue-200 opacity-20 blur-3xl dark:bg-blue-900"></div>
-        <div className="hidden sm:block absolute bottom-20 left-1/4 w-72 h-72 rounded-full bg-yellow-200 opacity-20 blur-3xl dark:bg-yellow-900"></div>
-      </div>
-
-      {/* Global styles for animations */}
-      <style jsx global>{`
-        @keyframes floatUp {
-          0% { 
-            transform: translateY(100vh) rotate(0deg) scale(0.8); 
-            opacity: 0;
-          }
-          15% { 
-            opacity: 0.6;
-          }
-          85% { 
-            opacity: 0.4;
-          }
-          100% { 
-            transform: translateY(-20vh) rotate(360deg) scale(1.2); 
-            opacity: 0;
-          }
-        }
+  const fetchMemories = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('memories')
+        .select(`
+          *,
+          media:memory_media(*)
+        `)
+        .order('date', { ascending: false });
         
-        .floating-heart {
-          animation-fill-mode: both;
-        }
-      `}</style>
+      if (error) throw error;
+      if (data) setMemories(data as Memory[]);
+    } catch (error) {
+      console.error('Error fetching memories:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      <div className="container relative z-10 mx-auto px-4 py-16 flex flex-col items-center justify-center min-h-screen text-center">
-        <div className="flex flex-col items-center max-w-3xl mx-auto">
-          {/* Logo/Icon */}
-          <div className="mb-6 p-3 bg-white dark:bg-slate-800 rounded-full shadow-md">
-            <Heart className="h-12 w-12 text-rose-500" />
-          </div>
-          
-          {/* Title */}
-          <h1 className="font-serif text-4xl md:text-6xl font-bold text-slate-900 dark:text-white mb-4">
-            Our Beautiful<br />
-            <span className="text-rose-500">Journey</span>
-          </h1>
-          
-          {/* Subtitle */}
-          <p className="text-lg md:text-xl text-slate-700 dark:text-slate-300 mb-4 max-w-2xl">
-            Months of treasured memories, shared adventures, and countless moments that have brought us closer together.
-          </p>
-          
-          {/* Live Time Counter - WOW Factor */}
-          <div className="bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm rounded-2xl p-6 mb-8 shadow-lg border border-white/20">
-            <div className="text-center mb-4">
-              <h2 className="text-lg font-medium text-slate-700 dark:text-slate-300 mb-2">Our Time Together</h2>
-              <div className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-                {timeData.months > 0 && <span className="text-rose-500">{timeData.months}</span>}
-                {timeData.months > 0 && <span className="text-sm font-normal text-slate-600 dark:text-slate-400 mx-1">months</span>}
-                
-                {timeData.weeks > 0 && <span className="text-blue-500">{timeData.weeks}</span>}
-                {timeData.weeks > 0 && <span className="text-sm font-normal text-slate-600 dark:text-slate-400 mx-1">weeks</span>}
-                
-                {timeData.days > 0 && <span className="text-emerald-500">{timeData.days}</span>}
-                {timeData.days > 0 && <span className="text-sm font-normal text-slate-600 dark:text-slate-400 mx-1">days</span>}
-              </div>
+  // Group memories by year/type for projects
+  const organizeMemoriesIntoProjects = () => {
+    const projectMap = new Map();
+    
+    memories.forEach(memory => {
+      const year = new Date(memory.date).getFullYear();
+      const projectKey = `memories-${year}`;
+      
+      if (!projectMap.has(projectKey)) {
+        projectMap.set(projectKey, {
+          id: projectKey,
+          title: `${year} Memories`,
+          type: 'random',
+          memoryCount: 0,
+          memories: [],
+          createdAt: memory.date,
+          coverImage: null
+        });
+      }
+      
+      const project = projectMap.get(projectKey);
+      project.memoryCount++;
+      project.memories.push(memory);
+      
+      // Use first memory's first media as cover
+      if (!project.coverImage && memory.media && memory.media.length > 0) {
+        project.coverImage = memory.media[0].url;
+      }
+    });
+    
+    return Array.from(projectMap.values());
+  };
+
+  const projectsFromMemories = organizeMemoriesIntoProjects();
+
+  const renderDashboard = () => (
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-pink-50 to-purple-50">
+      {/* Header */}
+      <header className="bg-white/80 backdrop-blur-sm border-b border-rose-200 sticky top-0 z-40">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <BookOpen className="h-8 w-8 text-rose-600" />
+              <h1 className="text-2xl font-serif font-bold text-rose-700">
+                Our Memory Book
+              </h1>
             </div>
-            
-            {/* Live Clock */}
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="bg-gradient-to-br from-rose-100 to-rose-50 dark:from-rose-900/30 dark:to-rose-800/20 rounded-lg p-3">
-                <div className="text-2xl font-bold text-rose-600 dark:text-rose-400 font-mono">
-                  {String(timeData.hours).padStart(2, '0')}
-                </div>
-                <div className="text-xs text-rose-500 dark:text-rose-400 font-medium">HOURS</div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/30 dark:to-blue-800/20 rounded-lg p-3">
-                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400 font-mono">
-                  {String(timeData.minutes).padStart(2, '0')}
-                </div>
-                <div className="text-xs text-blue-500 dark:text-blue-400 font-medium">MINUTES</div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-emerald-100 to-emerald-50 dark:from-emerald-900/30 dark:to-emerald-800/20 rounded-lg p-3">
-                <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                  {String(timeData.seconds).padStart(2, '0')}
-                </div>
-                <div className="text-xs text-emerald-500 dark:text-emerald-400 font-medium">SECONDS</div>
-              </div>
-            </div>
-            
-            <div className="text-center mt-4 text-sm text-slate-500 dark:text-slate-400">
-              <span className="font-medium">{timeData.totalDays}</span> total days of beautiful memories
-            </div>
-          </div>
-          
-          {/* Polaroid-style preview */}
-          <div className="w-full max-w-md mb-12 transform rotate-2 transition-all duration-500 hover:rotate-0">
-            <div className="bg-white dark:bg-slate-800 p-3 shadow-xl rounded-sm">
-              <div className="aspect-w-4 aspect-h-3 bg-slate-100 dark:bg-slate-700 rounded-sm overflow-hidden mb-4">
-                <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-                  <Gift className="w-12 h-12" />
-                </div>
-              </div>
-              <p className="font-handwriting text-center text-slate-700 dark:text-slate-300">Dive into our memories...</p>
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-600">
+                Welcome, {user?.email?.split('@')[0]}
+              </span>
+              <button 
+                onClick={() => setCurrentView('admin')}
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
+              >
+                <Settings className="h-4 w-4" />
+                Admin
+              </button>
+              <button 
+                onClick={signOut}
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Sign Out
+              </button>
             </div>
           </div>
-          
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-12">
-            <Link 
-              href="/storybook" 
-              className={cn(
-                buttonVariants({ size: "lg" }),
-                "bg-rose-500 hover:bg-rose-600 text-white border-none"
-              )}
+        </div>
+      </header>
+
+      <div className="container mx-auto px-6 py-8">
+        {/* Main Actions */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-3xl font-serif text-gray-800 mb-2">Your Memory Collections</h2>
+              <p className="text-gray-600">Explore your beautiful memories in different ways</p>
+            </div>
+            <button
+              onClick={() => setCurrentView('create')}
+              className="flex items-center space-x-2 bg-rose-600 text-white px-6 py-3 rounded-xl hover:bg-rose-700 transition-colors shadow-lg"
             >
-              Explore Our Story <ArrowRight className="ml-2 h-5 w-5" />
-            </Link>
-            
-            <Link 
-              href="/admin" 
-              className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm"
-              )}
+              <Plus className="h-5 w-5" />
+              <span>New Memory</span>
+            </button>
+          </div>
+        </div>
+
+        {/* View Options */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Digital Book */}
+          <div
+            onClick={() => setCurrentView('book')}
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer group border-2 border-rose-200"
+          >
+            <div className="h-40 bg-gradient-to-br from-rose-500 to-pink-600 relative flex items-center justify-center">
+              <BookOpen className="h-16 w-16 text-white/80" />
+              <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
+                <span className="text-white text-sm font-medium">{memories.length} memories</span>
+              </div>
+            </div>
+            <div className="p-6">
+              <h3 className="font-serif font-bold text-xl text-gray-800 mb-2 group-hover:text-rose-600 transition-colors">
+                Digital Scrapbook
+              </h3>
+              <p className="text-gray-600 text-sm mb-3">
+                Experience your memories like a beautiful physical scrapbook
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500 text-sm">
+                  Interactive • AI Enhanced
+                </span>
+                <button className="text-rose-600 hover:text-rose-700 text-sm font-medium">
+                  Open Book →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Memory Grid */}
+          <div
+            onClick={() => setCurrentView('grid')}
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer group border-2 border-purple-200"
+          >
+            <div className="h-40 bg-gradient-to-br from-purple-500 to-indigo-600 relative flex items-center justify-center">
+              <Camera className="h-16 w-16 text-white/80" />
+            </div>
+            <div className="p-6">
+              <h3 className="font-serif font-bold text-xl text-gray-800 mb-2 group-hover:text-purple-600 transition-colors">
+                Memory Gallery
+              </h3>
+              <p className="text-gray-600 text-sm mb-3">
+                Browse all memories in a beautiful grid layout
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500 text-sm">
+                  Grid View • Timeline
+                </span>
+                <button className="text-purple-600 hover:text-purple-700 text-sm font-medium">
+                  View Gallery →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Projects */}
+          <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer group border-2 border-blue-200">
+            <div className="h-40 bg-gradient-to-br from-blue-500 to-cyan-600 relative flex items-center justify-center">
+              <Calendar className="h-16 w-16 text-white/80" />
+              <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
+                <span className="text-white text-sm font-medium">{projectsFromMemories.length} collections</span>
+              </div>
+            </div>
+            <div className="p-6">
+              <h3 className="font-serif font-bold text-xl text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">
+                Memory Collections
+              </h3>
+              <p className="text-gray-600 text-sm mb-3">
+                Memories organized by year and special occasions
+              </p>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-500 text-sm">
+                  Organized • Themed
+                </span>
+                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                  View Collections →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Memories */}
+        {memories.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-lg p-6">
+            <h3 className="text-xl font-serif font-bold text-gray-800 mb-4 flex items-center gap-2">
+              <Heart className="h-5 w-5 text-rose-500" />
+              Recent Memories
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {memories.slice(0, 3).map((memory) => (
+                <div key={memory.id} className="group cursor-pointer" onClick={() => setCurrentView('book')}>
+                  <div className="aspect-video bg-gray-100 rounded-lg overflow-hidden mb-2">
+                    {memory.media && memory.media[0] ? (
+                      <img
+                        src={memory.media[0].url}
+                        alt={memory.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <Camera className="h-8 w-8" />
+                      </div>
+                    )}
+                  </div>
+                  <h4 className="font-medium text-gray-800 group-hover:text-rose-600 transition-colors">
+                    {memory.title}
+                  </h4>
+                  <p className="text-sm text-gray-500">
+                    {new Date(memory.date).toLocaleDateString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty State */}
+        {memories.length === 0 && !loading && (
+          <div className="text-center py-16">
+            <BookOpen className="h-24 w-24 text-gray-300 mx-auto mb-6" />
+            <h3 className="text-2xl font-serif text-gray-600 mb-4">No memories yet</h3>
+            <p className="text-gray-500 mb-8">Start creating your first beautiful memory</p>
+            <button
+              onClick={() => setCurrentView('create')}
+              className="bg-rose-600 text-white px-8 py-3 rounded-xl hover:bg-rose-700 transition-colors"
             >
-              Admin Access
-            </Link>
+              Create Your First Memory
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderMemoryForm = () => (
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-100 p-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="text-rose-600 hover:text-rose-700 flex items-center gap-2 mb-4"
+          >
+            ← Back to Dashboard
+          </button>
+          <h1 className="text-3xl font-serif font-bold text-gray-800 mb-2">Create New Memory</h1>
+          <p className="text-gray-600">Capture and preserve your beautiful moments forever</p>
+        </div>
+        <MemoryForm />
+      </div>
+    </div>
+  );
+
+  const renderAdminPanel = () => (
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-6">
+          <button
+            onClick={() => setCurrentView('dashboard')}
+            className="text-blue-600 hover:text-blue-700 flex items-center gap-2 mb-4"
+          >
+            ← Back to Dashboard
+          </button>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">Admin Panel</h1>
+          <p className="text-gray-600">Manage your memories and account</p>
+        </div>
+        
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <button
+                onClick={() => setCurrentView('create')}
+                className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-rose-400 transition-colors"
+              >
+                <Plus className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">Create Memory</p>
+              </button>
+              
+              <button
+                onClick={() => setCurrentView('book')}
+                className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 transition-colors"
+              >
+                <BookOpen className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">View Scrapbook</p>
+              </button>
+              
+              <button
+                onClick={() => setCurrentView('grid')}
+                className="p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-purple-400 transition-colors"
+              >
+                <Eye className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">Memory Gallery</p>
+              </button>
+            </div>
           </div>
           
-          {/* Quote or message */}
-          <div className="max-w-lg mx-auto">
-            <blockquote className="font-handwriting text-xl text-slate-600 dark:text-slate-400 italic text-center">
-              "Every moment with you becomes a beautiful memory worth treasuring forever."
-            </blockquote>
-          </div>
+          <MemoryForm />
         </div>
       </div>
     </div>
   );
+
+  // Render based on current view
+  switch (currentView) {
+    case 'book':
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-pink-50 to-rose-100">
+          <div className="p-4">
+            <button
+              onClick={() => setCurrentView('dashboard')}
+              className="text-rose-600 hover:text-rose-700 flex items-center gap-2 mb-4 bg-white px-4 py-2 rounded-lg shadow"
+            >
+              ← Back to Dashboard
+            </button>
+          </div>
+          <DigitalBook />
+        </div>
+      );
+    
+    case 'grid':
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-4">
+          <div className="max-w-6xl mx-auto">
+            <button
+              onClick={() => setCurrentView('dashboard')}
+              className="text-purple-600 hover:text-purple-700 flex items-center gap-2 mb-6 bg-white px-4 py-2 rounded-lg shadow"
+            >
+              ← Back to Dashboard
+            </button>
+            <h1 className="text-3xl font-serif font-bold text-gray-800 mb-6">Memory Gallery</h1>
+            <MemoriesGrid viewType="grid" />
+          </div>
+        </div>
+      );
+    
+    case 'create':
+      return renderMemoryForm();
+    
+    case 'admin':
+      return renderAdminPanel();
+    
+    default:
+      return renderDashboard();
+  }
 }
