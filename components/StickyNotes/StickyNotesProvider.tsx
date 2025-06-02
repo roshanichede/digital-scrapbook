@@ -70,7 +70,7 @@ export const StickyNotesProvider: React.FC<StickyNotesProviderProps> = ({ childr
   const [editingNote, setEditingNote] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  console.log('StickyNotesProvider rendered, notes count:', stickyNotes.length);
+  //console.log('StickyNotesProvider rendered, notes count:', stickyNotes.length);
 
   // Constants
   const noteColors = [

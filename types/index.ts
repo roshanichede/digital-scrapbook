@@ -6,6 +6,14 @@ export interface Project {
   user_id: string;
   created_at: string;
   updated_at: string;
+  memory_count?: number;
+  cover_image?: string;
+}
+
+export interface CreateProjectData {
+  title: string;
+  type: 'birthday' | 'anniversary' | 'other';
+  description?: string;
 }
 export interface Memory {
   id: string;

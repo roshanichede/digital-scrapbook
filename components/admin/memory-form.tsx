@@ -689,6 +689,17 @@ const renderImagePreview = (file: File, previewUrl: string, index: number) => {
     setLoading(true);
     
     try {
+       console.log("Submitting form with values:", values);
+    console.log("Selected layout:", selectedLayout);
+    console.log("Generated decorations:", generatedDecorations);
+     const insertPayload = {
+      title: values.title,
+      caption: values.caption,
+      date: values.date.toISOString().split('T')[0],
+      recommended_layout: selectedLayout,
+      decorations: generatedDecorations && useDecorations ? JSON.stringify(generatedDecorations) : null,
+    };
+    console.log("Insert payload:", insertPayload);
       // Insert the memory into the database with AI-recommended layout AND decorations
       const { data: memoryData, error: memoryError } = await supabase
         .from('memories')
@@ -698,9 +709,12 @@ const renderImagePreview = (file: File, previewUrl: string, index: number) => {
           date: values.date.toISOString().split('T')[0],
           recommended_layout: selectedLayout,
           decorations: generatedDecorations && useDecorations ? JSON.stringify(generatedDecorations) : null, // NEW: Save decorations
+          project_id: projectId, 
         })
         .select()
         .single();
+
+        console.log("Insert response:", memoryData, memoryError);
         
       if (memoryError) throw memoryError;
       if (!memoryData) throw new Error('No memory data returned after creation');
