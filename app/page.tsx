@@ -149,13 +149,13 @@ if (error) {
                 <Folder className="h-5 w-5" />
                 <span>New Project</span>
               </button>
-              <button
+              {/* <button
                 onClick={() => setCurrentView('create')}
                 className="flex items-center space-x-2 bg-rose-600 text-white px-6 py-3 rounded-xl hover:bg-rose-700 transition-colors shadow-lg"
               >
                 <Plus className="h-5 w-5" />
                 <span>Quick Memory</span>
-              </button>
+              </button> */}
             </div>
           </div>
         </div>
@@ -283,7 +283,7 @@ if (error) {
           </div>
 
           {/* Quick Add */}
-          <div
+          {/* <div
             onClick={() => setCurrentView('create')}
             className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden cursor-pointer group border-2 border-green-200"
           >
@@ -301,7 +301,7 @@ if (error) {
                 Create Memory →
               </button>
             </div>
-          </div>
+          </div> */}
         </div>
 
         {/* Recent Projects */}

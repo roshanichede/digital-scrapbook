@@ -690,16 +690,6 @@ const renderImagePreview = (file: File, previewUrl: string, index: number) => {
     
     try {
        console.log("Submitting form with values:", values);
-    console.log("Selected layout:", selectedLayout);
-    console.log("Generated decorations:", generatedDecorations);
-     const insertPayload = {
-      title: values.title,
-      caption: values.caption,
-      date: values.date.toISOString().split('T')[0],
-      recommended_layout: selectedLayout,
-      decorations: generatedDecorations && useDecorations ? JSON.stringify(generatedDecorations) : null,
-    };
-    console.log("Insert payload:", insertPayload);
       // Insert the memory into the database with AI-recommended layout AND decorations
       const { data: memoryData, error: memoryError } = await supabase
         .from('memories')
